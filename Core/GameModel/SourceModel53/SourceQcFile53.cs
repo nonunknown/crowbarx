@@ -1,0 +1,4906 @@
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using Microsoft.VisualBasic;
+using Microsoft.VisualBasic.CompilerServices;
+
+namespace Crowbar
+{
+    public class SourceQcFile53 : SourceQcFile
+    {
+
+        #region Creation and Destruction
+
+        // Public Sub New(ByVal outputFileStream As StreamWriter, ByVal outputPathFileName As String, ByVal mdlFileData As SourceMdlFileData53, ByVal vtxFileData As SourceVtxFileData07, ByVal phyFileData As SourcePhyFileData, ByVal aniFileData As SourceAniFileData49, ByVal modelName As String)
+        public SourceQcFile53(StreamWriter outputFileStream, string outputPathFileName, SourceMdlFileData53 mdlFileData, SourceVtxFileData07 vtxFileData, SourcePhyFileData phyFileData, string modelName)
+        {
+            theOutputFileStreamWriter = outputFileStream;
+            theMdlFileData = mdlFileData;
+            thePhyFileData = phyFileData;
+            // Me.theAniFileData = aniFileData
+            theVtxFileData = vtxFileData;
+            theModelName = modelName;
+            theOutputPath = FileManager.GetPath(outputPathFileName);
+            theOutputFileNameWithoutExtension = Path.GetFileNameWithoutExtension(outputPathFileName);
+        }
+
+        public SourceQcFile53(StreamWriter outputFileStream, string outputPathFileName, SourceMdlFileData53 mdlFileData, string modelName)
+        {
+            theOutputFileStreamWriter = outputFileStream;
+            theMdlFileData = mdlFileData;
+            theModelName = modelName;
+            theOutputPath = FileManager.GetPath(outputPathFileName);
+            theOutputFileNameWithoutExtension = Path.GetFileNameWithoutExtension(outputPathFileName);
+        }
+
+        public SourceQcFile53(StreamWriter outputFileStream, SourceMdlFileData53 mdlFileData, string modelName)
+        {
+            theOutputFileStreamWriter = outputFileStream;
+            theMdlFileData = mdlFileData;
+            theModelName = modelName;
+        }
+
+        #endregion
+
+        #region Delegates
+
+        public delegate void WriteGroupDelegate();
+
+        #endregion
+
+        #region Methods
+
+        public void WriteGroup(string qciGroupName, WriteGroupDelegate writeGroupAction, bool includeLineIsCommented, bool includeLineIsIndented)
+        {
+            if (Program.TheApp.Settings.DecompileGroupIntoQciFilesIsChecked)
+            {
+                string qciFileName;
+                string qciPathFileName;
+                StreamWriter mainOutputFileStream;
+                mainOutputFileStream = theOutputFileStreamWriter;
+                try
+                {
+                    // qciPathFileName = Path.Combine(Me.theOutputPathName, Me.theOutputFileNameWithoutExtension + "_flexes.qci")
+                    qciFileName = theOutputFileNameWithoutExtension + "_" + qciGroupName + ".qci";
+                    qciPathFileName = Path.Combine(theOutputPath, qciFileName);
+                    theOutputFileStreamWriter = File.CreateText(qciPathFileName);
+
+                    // Me.WriteFlexLines()
+                    // Me.WriteFlexControllerLines()
+                    // Me.WriteFlexRuleLines()
+                    writeGroupAction.Invoke();
+                }
+                catch (Exception ex)
+                {
+                    throw;
+                }
+                finally
+                {
+                    if (theOutputFileStreamWriter is object)
+                    {
+                        theOutputFileStreamWriter.Flush();
+                        theOutputFileStreamWriter.Close();
+                        theOutputFileStreamWriter = mainOutputFileStream;
+                    }
+                }
+
+                try
+                {
+                    if (File.Exists(qciPathFileName))
+                    {
+                        var qciFileInfo = new FileInfo(qciPathFileName);
+                        if (qciFileInfo.Length > 0L)
+                        {
+                            string line = "";
+                            theOutputFileStreamWriter.WriteLine();
+                            if (includeLineIsCommented)
+                            {
+                                line += "// ";
+                            }
+
+                            if (includeLineIsIndented)
+                            {
+                                line += Constants.vbTab;
+                            }
+
+                            if (Program.TheApp.Settings.DecompileQcUseMixedCaseForKeywordsIsChecked)
+                            {
+                                line += "$Include ";
+                            }
+                            else
+                            {
+                                line += "$include ";
+                            }
+
+                            line += "\"";
+                            line += qciFileName;
+                            line += "\"";
+                            theOutputFileStreamWriter.WriteLine(line);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    throw;
+                }
+            }
+            else
+            {
+                // Me.WriteFlexLines()
+                // Me.WriteFlexControllerLines()
+                // Me.WriteFlexRuleLines()
+                writeGroupAction.Invoke();
+            }
+        }
+
+        public void WriteModelNameCommand()
+        {
+            string line = "";
+            // Dim modelPath As String
+            string modelPathFileName;
+
+            // modelPath = FileManager.GetPath(CStr(theSourceEngineModel.theMdlFileHeader.name).Trim(Chr(0)))
+            // modelPathFileName = Path.Combine(modelPath, theSourceEngineModel.ModelName + ".mdl")
+            // modelPathFileName = CStr(theSourceEngineModel.MdlFileHeader.name).Trim(Chr(0))
+            modelPathFileName = theMdlFileData.theModelName;
+            theOutputFileStreamWriter.WriteLine();
+
+            // $modelname "survivors/survivor_producer.mdl"
+            // $modelname "custom/survivor_producer.mdl"
+            if (Program.TheApp.Settings.DecompileQcUseMixedCaseForKeywordsIsChecked)
+            {
+                line = "$ModelName ";
+            }
+            else
+            {
+                line = "$modelname ";
+            }
+
+            line += "\"";
+            line += modelPathFileName;
+            line += "\"";
+            theOutputFileStreamWriter.WriteLine(line);
+        }
+
+        public void WriteIncludeMainQcLine()
+        {
+            string line = "";
+            theOutputFileStreamWriter.WriteLine();
+
+            // $include "Rochelle_world.qci"
+            if (Program.TheApp.Settings.DecompileQcUseMixedCaseForKeywordsIsChecked)
+            {
+                line += "$Include ";
+            }
+            else
+            {
+                line += "$include ";
+            }
+
+            line += "\"";
+            line += "decompiled.qci";
+            line += "\"";
+            theOutputFileStreamWriter.WriteLine(line);
+        }
+
+        public void WriteHeaderComment()
+        {
+            Common.WriteHeaderComment(theOutputFileStreamWriter);
+        }
+
+        public void WriteStaticPropCommand()
+        {
+            string line = "";
+
+            // $staticprop
+            if ((theMdlFileData.flags & SourceMdlFileData.STUDIOHDR_FLAGS_STATIC_PROP) > 0)
+            {
+                theOutputFileStreamWriter.WriteLine();
+                if (Program.TheApp.Settings.DecompileQcUseMixedCaseForKeywordsIsChecked)
+                {
+                    line = "$StaticProp";
+                }
+                else
+                {
+                    line = "$staticprop";
+                }
+
+                theOutputFileStreamWriter.WriteLine(line);
+            }
+        }
+
+        public void WriteConstDirectionalLightCommand()
+        {
+            string line = "";
+
+            // $constantdirectionallight
+            if ((theMdlFileData.flags & SourceMdlFileData.STUDIOHDR_FLAGS_CONSTANT_DIRECTIONAL_LIGHT_DOT) > 0)
+            {
+                theOutputFileStreamWriter.WriteLine();
+                if (Program.TheApp.Settings.DecompileQcUseMixedCaseForKeywordsIsChecked)
+                {
+                    line = "$ConstantDirectionalLight ";
+                }
+                else
+                {
+                    line = "$constantdirectionallight ";
+                }
+                // FROM: studiomdl.cpp
+                // g_constdirectionalightdot = (byte)( verify_atof(token) * 255.0f );
+                line += (theMdlFileData.directionalLightDot / 255d).ToString();
+                theOutputFileStreamWriter.WriteLine(line);
+            }
+        }
+
+        // Private Function GetModelPathFileName(ByVal aModel As SourceMdlModel) As String
+        // Dim pathFileName As String
+
+        // 'NOTE: Use Path.GetFileName() to avoid writing relative-path file names: $model "TeenAngst" "../dmx/zoey_reference_wrinkle.dmx" {
+        // 'NOTE: Avoid this example: 	replacemodel "../dmx/zoey_reference_wrinkle.dmx" "../dmx/zoey_reference_wrinkle.dmx_lod1"
+        // 'line += CStr(theSourceEngineModel.theMdlFileData.theBodyParts(0).theModels(0).name).Trim(Chr(0))
+        // 'line += Path.GetFileName(CStr(Me.theSourceEngineModel.theMdlFileHeader.theBodyParts(0).theModels(0).name).Trim(Chr(0)))
+        // 'NOTE: In general, do not add the ".smd" because the MDL file will store it if it was compiled with it.
+        // 'line += ".smd"
+        // pathFileName = Path.GetFileName(CStr(aModel.name).Trim(Chr(0)))
+
+        // 'NOTE: Add the ".smd" when ends with ".dmx" or else the qc file won't be able to compile.
+        // 'If modelFileName.EndsWith(".dmx") Then
+        // '	modelFileName += ".smd"
+        // 'End If
+        // '------
+        // If Path.GetExtension(pathFileName) <> ".smd" Then
+        // pathFileName = Path.ChangeExtension(pathFileName, ".smd")
+        // End If
+
+        // Return pathFileName
+        // End Function
+
+        public void WriteModelCommand()
+        {
+            string line = "";
+            SourceMdlBodyPart aBodyPart;
+            SourceMdlModel aBodyModel;
+            // Dim referenceSmdFileName As String
+            // Dim aBone As SourceMdlBone
+            List<string> eyeballNames;
+
+            // $model "producer" "producer_model_merged.dmx.smd" {
+            // //-doesn't work     eyeball righteye ValveBiped.Bip01_Head1 -1.260 -0.086 64.594 eyeball_r 1.050  3.000 producer_head 0.530
+            // //-doesn't work     eyeball lefteye ValveBiped.Bip01_Head1 1.260 -0.086 64.594 eyeball_l 1.050  -3.000 producer_head 0.530
+            // mouth 0 "mouth"  ValveBiped.Bip01_Head1 0.000 1.000 0.000
+            // }
+            if (theMdlFileData.theModelCommandIsUsed && theMdlFileData.theBodyParts is object && theMdlFileData.theBodyParts.Count > 0)
+            {
+                eyeballNames = new List<string>();
+                line = "";
+                theOutputFileStreamWriter.WriteLine(line);
+                aBodyPart = theMdlFileData.theBodyParts[theMdlFileData.theBodyPartIndexThatShouldUseModelCommand];
+                aBodyModel = aBodyPart.theModels[0];
+                // referenceSmdFileName = Me.GetModelPathFileName(Me.theSourceEngineModel.theMdlFileHeader.theBodyParts(0).theModels(0))
+                // referenceSmdFileName = theSourceEngineModel.GetLodSmdFileName(0)
+                aBodyModel.theSmdFileNames[0] = SourceFileNamesModule.CreateBodyGroupSmdFileName(aBodyModel.theSmdFileNames[0], theMdlFileData.theBodyPartIndexThatShouldUseModelCommand, 0, 0, theModelName, Conversions.ToString(aBodyPart.theModels[0].name));
+                if (Program.TheApp.Settings.DecompileQcUseMixedCaseForKeywordsIsChecked)
+                {
+                    line = "$Model ";
+                }
+                else
+                {
+                    line = "$model ";
+                }
+
+                line += "\"";
+                line += aBodyPart.theName;
+                line += "\" \"";
+                line += aBodyModel.theSmdFileNames[0];
+                line += "\"";
+                line += " {";
+                theOutputFileStreamWriter.WriteLine(line);
+
+                // NOTE: Must call WriteEyeballLines() before WriteEyelidLines(), because eyeballNames are created in first and sent to other.
+                WriteEyeballLines(aBodyPart, ref eyeballNames);
+                WriteEyelidLines(aBodyPart, eyeballNames);
+                WriteMouthLines();
+                WriteGroup("flex", WriteGroupFlex, false, true);
+                line = "}";
+                theOutputFileStreamWriter.WriteLine(line);
+            }
+        }
+
+        private void WriteEyeballLines(SourceMdlBodyPart aBodyPart, ref List<string> eyeballNames)
+        {
+            string line = "";
+            SourceMdlModel aModel;
+            SourceMdlEyeball anEyeball;
+            string eyeballTextureName;
+            double diameter;
+            double angle;
+            double irisScale;
+            SourceVector poseToBone0;
+            SourceVector poseToBone1;
+            SourceVector poseToBone2;
+            SourceVector poseToBone3;
+            SourceVector eyeballPosition;
+            poseToBone0 = new SourceVector();
+            poseToBone1 = new SourceVector();
+            poseToBone2 = new SourceVector();
+            poseToBone3 = new SourceVector();
+            eyeballPosition = new SourceVector();
+            try
+            {
+                // eyeball righteye ValveBiped.Bip01_Head1 -1.160 -3.350 62.600 teenangst_eyeball_r 1.000  3.000 zoey_color 0.630
+                // eyeball lefteye ValveBiped.Bip01_Head1 1.160 -3.350 62.600 teenangst_eyeball_l 1.000  -3.000 zoey_color 0.630
+                // aBodyPart = Me.theMdlFileData.theBodyParts(0)
+                if (aBodyPart.theModels is object && aBodyPart.theModels.Count > 0)
+                {
+                    aModel = aBodyPart.theModels[0];
+                    if (aModel.theEyeballs is object && aModel.theEyeballs.Count > 0)
+                    {
+                        line = "";
+                        theOutputFileStreamWriter.WriteLine(line);
+                        for (int eyeballIndex = 0, loopTo = aModel.theEyeballs.Count - 1; eyeballIndex <= loopTo; eyeballIndex++)
+                        {
+                            anEyeball = aModel.theEyeballs[eyeballIndex];
+
+                            // eyeballPosition.x = CSng(Math.Round(anEyeball.org.x, 3))
+                            // eyeballPosition.y = CSng(Math.Round(anEyeball.org.y, 3))
+                            // eyeballPosition.z = CSng(Math.Round(anEyeball.org.z, 3))
+                            // ======
+                            // DONE: Transform vertices from Pose to Bone space, i.e. reverse these operations.
+                            // FROM: studiomdl.cpp
+                            // For boneToPose[]:
+                            // AngleMatrix( psource->rawanim[0][i].rot, m );
+                            // m[0][3] = psource->rawanim[0][i].pos[0];
+                            // m[1][3] = psource->rawanim[0][i].pos[1];
+                            // m[2][3] = psource->rawanim[0][i].pos[2];
+                            // // translate eyeball into bone space
+                            // VectorITransform( tmp, pmodel->source->boneToPose[eyeball->bone], eyeball->org );
+                            // ------
+                            // WORKS!
+                            SourceMdlBone aBone;
+                            aBone = theMdlFileData.theBones[anEyeball.boneIndex];
+                            // AngleMatrix(aBone.rotationX, aBone.rotationY, aBone.rotationZ, poseToBone0, poseToBone1, poseToBone2)
+                            // poseToBone3.x = -aBone.positionX
+                            // poseToBone3.y = -aBone.positionY
+                            // poseToBone3.z = -aBone.positionZ
+                            // eyeballPosition = MathModule.VectorITransform(anEyeball.org, poseToBone0, poseToBone1, poseToBone2, poseToBone3)
+                            eyeballPosition = MathModule.VectorITransform(anEyeball.org, aBone.poseToBoneColumn0, aBone.poseToBoneColumn1, aBone.poseToBoneColumn2, aBone.poseToBoneColumn3);
+
+                            // FROM: studiomdl.cpp
+                            // eyeball->radius = verify_atof (token) / 2.0;
+                            diameter = anEyeball.radius * 2d;
+                            // FROM: studiomdl.cpp
+                            // eyeball->zoffset = tan( DEG2RAD( verify_atof (token) ) );
+                            angle = Math.Round(MathModule.RadiansToDegrees(Math.Atan(anEyeball.zOffset)), 6);
+                            // FROM: studiomdl.cpp
+                            // eyeball->iris_scale = 1.0 / verify_atof( token );
+                            irisScale = 1d / anEyeball.irisScale;
+
+                            // NOTE: The mdl file does not store the eyeball name; studiomdl uses name once for checking eyelid info.
+                            // So, just use an arbitrary name and guess which eyeball goes with which eyelid.
+                            // Typically, there are only two eyeballs and right one has angle > 0 and left one has angle < 0.
+                            if (eyeballIndex == 0 && angle > 0d)
+                            {
+                                eyeballNames.Add("eye_right");
+                            }
+                            else if (eyeballIndex == 1 && angle < 0d)
+                            {
+                                eyeballNames.Add("eye_left");
+                            }
+                            else
+                            {
+                                eyeballNames.Add("eye_" + eyeballIndex.ToString(Program.TheApp.InternalNumberFormat));
+                            }
+
+                            if (anEyeball.theTextureIndex == -1)
+                            {
+                                eyeballTextureName = "[unknown_texture]";
+                            }
+                            else
+                            {
+                                // eyeballTextureName = Me.theMdlFileData.theTextures(anEyeball.theTextureIndex).thePathFileName
+                                eyeballTextureName = theMdlFileData.theModifiedTextureFileNames[anEyeball.theTextureIndex];
+                            }
+
+                            line = Constants.vbTab;
+                            line += "eyeball \"";
+                            line += eyeballNames[eyeballIndex];
+                            line += "\" \"";
+                            line += theMdlFileData.theBones[anEyeball.boneIndex].theName;
+                            line += "\" ";
+                            line += eyeballPosition.x.ToString("0.000000", Program.TheApp.InternalNumberFormat);
+                            line += " ";
+                            line += eyeballPosition.y.ToString("0.000000", Program.TheApp.InternalNumberFormat);
+                            line += " ";
+                            line += eyeballPosition.z.ToString("0.000000", Program.TheApp.InternalNumberFormat);
+                            line += " \"";
+                            line += eyeballTextureName;
+                            line += "\" ";
+                            line += diameter.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                            line += " ";
+                            line += angle.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                            line += " ";
+                            // Unused in later Source Engine versions.
+                            line += "\"iris_unused\"";
+                            line += " ";
+                            line += Math.Round(irisScale, 6).ToString("0.######", Program.TheApp.InternalNumberFormat);
+                            theOutputFileStreamWriter.WriteLine(line);
+
+                            // NOTE: Used to write frame indexes for eyelid lines and prevent eyelid flexes from being written in flex list in qc file.
+                            theMdlFileData.theFlexDescs[anEyeball.upperLidFlexDesc].theDescIsUsedByEyelid = true;
+                            theMdlFileData.theFlexDescs[anEyeball.lowerLidFlexDesc].theDescIsUsedByEyelid = true;
+                        }
+                    }
+                }
+            }
+            catch
+            {
+            }
+
+            CreateListOfEyelidFlexFrameIndexes();
+        }
+
+        private void CreateListOfEyelidFlexFrameIndexes()
+        {
+            FlexFrame aFlexFrame;
+            theMdlFileData.theEyelidFlexFrameIndexes = new List<int>();
+            for (int frameIndex = 1, loopTo = theMdlFileData.theFlexFrames.Count - 1; frameIndex <= loopTo; frameIndex++)
+            {
+                aFlexFrame = theMdlFileData.theFlexFrames[frameIndex];
+                if (!theMdlFileData.theEyelidFlexFrameIndexes.Contains(frameIndex))
+                {
+                    if (theMdlFileData.theFlexDescs[aFlexFrame.flexes[0].flexDescIndex].theDescIsUsedByEyelid)
+                    {
+                        theMdlFileData.theEyelidFlexFrameIndexes.Add(frameIndex);
+                    }
+                }
+            }
+        }
+
+        private void WriteEyelidLines(SourceMdlBodyPart aBodyPart, List<string> eyeballNames)
+        {
+            string line = "";
+            SourceMdlModel aModel;
+            SourceMdlEyeball anEyeball;
+            int frameIndex;
+            string eyelidName;
+            try
+            {
+                // Write eyelid options.
+                // $definevariable expressions "zoeyp.vta"
+                // eyelid  upper_right $expressions$ lowerer 1 -0.19 neutral 0 0.13 raiser 2 0.27 split 0.1 eyeball righteye
+                // eyelid  lower_right $expressions$ lowerer 3 -0.32 neutral 0 -0.19 raiser 4 -0.02 split 0.1 eyeball righteye
+                // eyelid  upper_left $expressions$ lowerer 1 -0.19 neutral 0 0.13 raiser 2 0.27 split -0.1 eyeball lefteye
+                // eyelid  lower_left $expressions$ lowerer 3 -0.32 neutral 0 -0.19 raiser 4 -0.02 split -0.1 eyeball lefteye
+                // aBodyPart = Me.theMdlFileData.theBodyParts(0)
+                // If aBodyPart.theModels IsNot Nothing AndAlso aBodyPart.theModels.Count > 0 AndAlso Me.theMdlFileData.theEyelidFlexFrameIndexes.Count > 0 Then
+                if (aBodyPart.theModels is object && aBodyPart.theModels.Count > 0)
+                {
+                    aModel = aBodyPart.theModels[0];
+                    if (aModel.theEyeballs is object && aModel.theEyeballs.Count > 0)
+                    {
+                        line = "";
+                        theOutputFileStreamWriter.WriteLine(line);
+                        frameIndex = 0;
+                        for (int eyeballIndex = 0, loopTo = aModel.theEyeballs.Count - 1; eyeballIndex <= loopTo; eyeballIndex++)
+                        {
+                            anEyeball = aModel.theEyeballs[eyeballIndex];
+                            if (frameIndex + 3 >= theMdlFileData.theEyelidFlexFrameIndexes.Count)
+                            {
+                                frameIndex = 0;
+                            }
+
+                            eyelidName = theMdlFileData.theFlexDescs[anEyeball.upperLidFlexDesc].theName;
+                            line = Constants.vbTab;
+                            line += "eyelid ";
+                            line += eyelidName;
+                            // line += " """
+                            // line += Path.GetFileNameWithoutExtension(CStr(Me.theSourceEngineModel.theMdlFileHeader.theBodyParts(0).theModels(0).name).Trim(Chr(0)))
+                            // line += ".vta"" "
+                            line += " \"";
+                            line += SourceFileNamesModule.GetVtaFileName(theModelName, 0);
+                            line += "\" ";
+                            line += "lowerer ";
+                            // TODO: The frame indexes here and for raiser need correcting.
+                            // line += theSourceEngineModel.theMdlFileHeader.theFlexDescs(anEyeball.upperFlexDesc(0)).theVtaFrameIndex.ToString()
+                            // TEST:
+                            // line += anEyeball.upperFlexDesc(0).ToString()
+                            // TEST:
+                            line += theMdlFileData.theEyelidFlexFrameIndexes[frameIndex].ToString(Program.TheApp.InternalNumberFormat);
+                            frameIndex += 1;
+                            line += " ";
+                            line += anEyeball.upperTarget[0].ToString("0.##", Program.TheApp.InternalNumberFormat);
+                            line += " ";
+                            line += "neutral 0";
+                            // line += theSourceEngineModel.theMdlFileHeader.theFlexDescs(anEyeball.upperFlexDesc(1)).theVtaFrameIndex.ToString()
+                            line += " ";
+                            line += anEyeball.upperTarget[1].ToString("0.##", Program.TheApp.InternalNumberFormat);
+                            line += " ";
+                            line += "raiser ";
+                            // line += theSourceEngineModel.theMdlFileHeader.theFlexDescs(anEyeball.upperFlexDesc(2)).theVtaFrameIndex.ToString()
+                            // TEST:
+                            // line += anEyeball.upperFlexDesc(2).ToString()
+                            // TEST:
+                            line += theMdlFileData.theEyelidFlexFrameIndexes[frameIndex].ToString(Program.TheApp.InternalNumberFormat);
+                            frameIndex += 1;
+                            line += " ";
+                            line += anEyeball.upperTarget[2].ToString("0.##", Program.TheApp.InternalNumberFormat);
+                            line += " ";
+                            line += "split ";
+                            // TODO: simplify.cpp RemapVertexAnimations(); probably should call SourceMdlFile.GetSplit()?
+                            line += GetSplitNumber(eyelidName);
+                            line += " eyeball \"";
+                            line += eyeballNames[eyeballIndex];
+                            line += "\"";
+                            theOutputFileStreamWriter.WriteLine(line);
+                            theMdlFileData.theFlexDescs[anEyeball.upperLidFlexDesc].theDescIsUsedByFlex = true;
+                            theMdlFileData.theFlexDescs[anEyeball.upperFlexDesc[0]].theDescIsUsedByFlex = true;
+                            theMdlFileData.theFlexDescs[anEyeball.upperFlexDesc[1]].theDescIsUsedByFlex = true;
+                            theMdlFileData.theFlexDescs[anEyeball.upperFlexDesc[2]].theDescIsUsedByFlex = true;
+                            eyelidName = theMdlFileData.theFlexDescs[anEyeball.lowerLidFlexDesc].theName;
+                            line = Constants.vbTab;
+                            line += "eyelid ";
+                            line += eyelidName;
+                            // line += " """
+                            // line += Path.GetFileNameWithoutExtension(CStr(Me.theSourceEngineModel.theMdlFileHeader.theBodyParts(0).theModels(0).name).Trim(Chr(0)))
+                            // line += ".vta"" "
+                            line += " \"";
+                            line += SourceFileNamesModule.GetVtaFileName(theModelName, 0);
+                            line += "\" ";
+                            line += "lowerer ";
+                            // line += theSourceEngineModel.theMdlFileHeader.theFlexDescs(anEyeball.lowerFlexDesc(0)).theVtaFrameIndex.ToString()
+                            // TEST:
+                            // line += anEyeball.lowerFlexDesc(0).ToString()
+                            // TEST:
+                            line += theMdlFileData.theEyelidFlexFrameIndexes[frameIndex].ToString(Program.TheApp.InternalNumberFormat);
+                            frameIndex += 1;
+                            line += " ";
+                            line += anEyeball.lowerTarget[0].ToString("0.##", Program.TheApp.InternalNumberFormat);
+                            line += " ";
+                            line += "neutral 0";
+                            // line += theSourceEngineModel.theMdlFileHeader.theFlexDescs(anEyeball.lowerFlexDesc(1)).theVtaFrameIndex.ToString()
+                            line += " ";
+                            line += anEyeball.lowerTarget[1].ToString("0.##", Program.TheApp.InternalNumberFormat);
+                            line += " ";
+                            line += "raiser ";
+                            // line += theSourceEngineModel.theMdlFileHeader.theFlexDescs(anEyeball.lowerFlexDesc(2)).theVtaFrameIndex.ToString()
+                            // TEST:
+                            // line += anEyeball.lowerFlexDesc(2).ToString()
+                            // TEST:
+                            line += theMdlFileData.theEyelidFlexFrameIndexes[frameIndex].ToString(Program.TheApp.InternalNumberFormat);
+                            frameIndex += 1;
+                            line += " ";
+                            line += anEyeball.lowerTarget[2].ToString("0.##", Program.TheApp.InternalNumberFormat);
+                            line += " ";
+                            line += "split ";
+                            // TODO: simplify.cpp RemapVertexAnimations(); probably should call SourceMdlFile.GetSplit()?
+                            line += GetSplitNumber(eyelidName);
+                            line += " eyeball \"";
+                            line += eyeballNames[eyeballIndex];
+                            line += "\"";
+                            theOutputFileStreamWriter.WriteLine(line);
+                            theMdlFileData.theFlexDescs[anEyeball.lowerLidFlexDesc].theDescIsUsedByFlex = true;
+                            theMdlFileData.theFlexDescs[anEyeball.lowerFlexDesc[0]].theDescIsUsedByFlex = true;
+                            theMdlFileData.theFlexDescs[anEyeball.lowerFlexDesc[1]].theDescIsUsedByFlex = true;
+                            theMdlFileData.theFlexDescs[anEyeball.lowerFlexDesc[2]].theDescIsUsedByFlex = true;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                int debug = 4242;
+            }
+        }
+
+        private string GetSplitNumber(string eyelidName)
+        {
+            if (eyelidName.Contains("right"))
+            {
+                return "1";
+            }
+            else if (eyelidName.Contains("left"))
+            {
+                return "-1";
+            }
+            else
+            {
+                return "0";
+            }
+        }
+
+        private void WriteMouthLines()
+        {
+            string line = "";
+            double offsetX;
+            double offsetY;
+            double offsetZ;
+
+            // NOTE: Writes out mouth line correctly for teenangst zoey.
+            if (theMdlFileData.theMouths is object && theMdlFileData.theMouths.Count > 0)
+            {
+                line = "";
+                theOutputFileStreamWriter.WriteLine(line);
+                for (int i = 0, loopTo = theMdlFileData.theMouths.Count - 1; i <= loopTo; i++)
+                {
+                    SourceMdlMouth aMouth;
+                    aMouth = theMdlFileData.theMouths[i];
+                    offsetX = Math.Round(aMouth.forward.x, 3);
+                    offsetY = Math.Round(aMouth.forward.y, 3);
+                    offsetZ = Math.Round(aMouth.forward.z, 3);
+                    line = Constants.vbTab;
+                    line += "mouth ";
+                    line += i.ToString(Program.TheApp.InternalNumberFormat);
+                    line += " \"";
+                    line += theMdlFileData.theFlexDescs[aMouth.flexDescIndex].theName;
+                    line += "\" \"";
+                    line += theMdlFileData.theBones[aMouth.boneIndex].theName;
+                    line += "\" ";
+                    line += offsetX.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                    line += " ";
+                    line += offsetY.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                    line += " ";
+                    line += offsetZ.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                    theOutputFileStreamWriter.WriteLine(line);
+                    theMdlFileData.theFlexDescs[aMouth.flexDescIndex].theDescIsUsedByFlex = true;
+                }
+            }
+        }
+
+        private void WriteGroupFlex()
+        {
+            WriteFlexLines();
+            WriteFlexControllerLines();
+            WriteFlexRuleLines();
+        }
+
+        private void WriteFlexLines()
+        {
+            string line = "";
+
+            // Write flexfile (contains flexDescs).
+            if (theMdlFileData.theFlexFrames is object && theMdlFileData.theFlexFrames.Count > 0)
+            {
+                line = "";
+                theOutputFileStreamWriter.WriteLine(line);
+                line = Constants.vbTab;
+                line += "flexfile";
+                // line += Path.GetFileNameWithoutExtension(CStr(Me.theSourceEngineModel.theMdlFileHeader.theBodyParts(0).theModels(0).name).Trim(Chr(0)))
+                // line += ".vta"""
+                line += " \"";
+                line += SourceFileNamesModule.GetVtaFileName(theModelName, 0);
+                line += "\" ";
+                theOutputFileStreamWriter.WriteLine(line);
+                line = Constants.vbTab;
+                line += "{";
+                theOutputFileStreamWriter.WriteLine(line);
+
+                // ======
+                line = Constants.vbTab;
+                line += Constants.vbTab;
+                line += "defaultflex frame 0";
+                theOutputFileStreamWriter.WriteLine(line);
+
+                // NOTE: Start at index 1 because defaultflex frame is at index 0.
+                FlexFrame aFlexFrame;
+                for (int frameIndex = 1, loopTo = theMdlFileData.theFlexFrames.Count - 1; frameIndex <= loopTo; frameIndex++)
+                {
+                    aFlexFrame = theMdlFileData.theFlexFrames[frameIndex];
+                    line = Constants.vbTab;
+                    line += Constants.vbTab;
+                    if (theMdlFileData.theFlexDescs[aFlexFrame.flexes[0].flexDescIndex].theDescIsUsedByEyelid)
+                    {
+                        line += "// Already in eyelid lines: ";
+                    }
+
+                    if (aFlexFrame.flexHasPartner)
+                    {
+                        line += "flexpair \"";
+                        line += aFlexFrame.flexName.Substring(0, aFlexFrame.flexName.Length - 1);
+                    }
+                    else
+                    {
+                        line += "flex \"";
+                        line += aFlexFrame.flexName;
+                    }
+
+                    line += "\"";
+                    if (aFlexFrame.flexHasPartner)
+                    {
+                        line += " ";
+                        line += aFlexFrame.flexSplit.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                    }
+
+                    line += " frame ";
+                    line += frameIndex.ToString();
+                    theOutputFileStreamWriter.WriteLine(line);
+                }
+                // ======
+                // Dim aBodyPart As SourceMdlBodyPart
+                // Dim aModel As SourceMdlModel
+                // Dim frameIndex As Integer
+                // Dim flexDescHasBeenWritten As List(Of Integer)
+                // Dim meshVertexIndexStart As Integer
+                // frameIndex = 0
+                // flexDescHasBeenWritten = New List(Of Integer)
+
+                // line = vbTab
+                // line += "defaultflex frame "
+                // line += frameIndex.ToString()
+                // Me.theOutputFileStreamWriter.WriteLine(line)
+
+                // For bodyPartIndex As Integer = 0 To theSourceEngineModel.theMdlFileHeader.theBodyParts.Count - 1
+                // aBodyPart = theSourceEngineModel.theMdlFileHeader.theBodyParts(bodyPartIndex)
+
+                // If aBodyPart.theModels IsNot Nothing AndAlso aBodyPart.theModels.Count > 0 Then
+                // For modelIndex As Integer = 0 To aBodyPart.theModels.Count - 1
+                // aModel = aBodyPart.theModels(modelIndex)
+
+                // If aModel.theMeshes IsNot Nothing AndAlso aModel.theMeshes.Count > 0 Then
+                // For meshIndex As Integer = 0 To aModel.theMeshes.Count - 1
+                // Dim aMesh As SourceMdlMesh
+                // aMesh = aModel.theMeshes(meshIndex)
+
+                // meshVertexIndexStart = Me.theSourceEngineModel.theMdlFileHeader.theBodyParts(bodyPartIndex).theModels(modelIndex).theMeshes(meshIndex).vertexIndexStart
+
+                // If aMesh.theFlexes IsNot Nothing AndAlso aMesh.theFlexes.Count > 0 Then
+                // For flexIndex As Integer = 0 To aMesh.theFlexes.Count - 1
+                // Dim aFlex As SourceMdlFlex
+                // aFlex = aMesh.theFlexes(flexIndex)
+
+                // If flexDescHasBeenWritten.Contains(aFlex.flexDescIndex) Then
+                // Continue For
+                // Else
+                // flexDescHasBeenWritten.Add(aFlex.flexDescIndex)
+                // End If
+
+                // line = vbTab
+                // Dim aFlexDescPartnerIndex As Integer
+                // 'Dim aFlexPartner As SourceMdlFlex
+                // aFlexDescPartnerIndex = aMesh.theFlexes(flexIndex).flexDescPartnerIndex
+                // If aFlexDescPartnerIndex > 0 Then
+                // 'aFlexPartner = theSourceEngineModel.theMdlFileHeader.theFlexDescs(aFlexDescPartnerIndex)
+                // If Not flexDescHasBeenWritten.Contains(aFlex.flexDescPartnerIndex) Then
+                // flexDescHasBeenWritten.Add(aFlex.flexDescPartnerIndex)
+                // End If
+                // line += "flexpair """
+                // Dim flexName As String
+                // flexName = theSourceEngineModel.theMdlFileHeader.theFlexDescs(aFlex.flexDescIndex).theName
+                // line += flexName.Remove(flexName.Length - 1, 1)
+                // line += """"
+                // line += " "
+                // line += Me.GetSplit(aFlex, meshVertexIndexStart).ToString("0.######", TheApp.InternalNumberFormat)
+
+                // theSourceEngineModel.theMdlFileHeader.theFlexDescs(aFlex.flexDescIndex).theDescIsUsedByFlex = True
+                // theSourceEngineModel.theMdlFileHeader.theFlexDescs(aFlex.flexDescPartnerIndex).theDescIsUsedByFlex = True
+                // Else
+                // line += "flex """
+                // line += theSourceEngineModel.theMdlFileHeader.theFlexDescs(aFlex.flexDescIndex).theName
+                // line += """"
+
+                // theSourceEngineModel.theMdlFileHeader.theFlexDescs(aFlex.flexDescIndex).theDescIsUsedByFlex = True
+                // End If
+                // line += " frame "
+                // 'NOTE: Start at second frame because first frame is "basis" frame.
+                // frameIndex += 1
+                // line += frameIndex.ToString()
+                // 'line += theSourceEngineModel.theMdlFileHeader.theFlexDescs(aFlex.flexDescIndex).theVtaFrameIndex.ToString()
+                // Me.theOutputFileStreamWriter.WriteLine(line)
+                // Next
+                // End If
+                // Next
+                // End If
+                // Next
+                // End If
+                // Next
+
+                line = Constants.vbTab;
+                line += "}";
+                theOutputFileStreamWriter.WriteLine(line);
+            }
+        }
+
+        private void WriteFlexControllerLines()
+        {
+            string line = "";
+
+            // NOTE: Writes out flexcontrollers correctly for teenangst zoey.
+            if (theMdlFileData.theFlexControllers is object && theMdlFileData.theFlexControllers.Count > 0)
+            {
+                SourceMdlFlexController aFlexController;
+                line = "";
+                theOutputFileStreamWriter.WriteLine(line);
+                for (int i = 0, loopTo = theMdlFileData.theFlexControllers.Count - 1; i <= loopTo; i++)
+                {
+                    aFlexController = theMdlFileData.theFlexControllers[i];
+                    line = Constants.vbTab;
+                    line += "flexcontroller ";
+                    line += aFlexController.theType;
+                    line += " ";
+                    line += "range ";
+                    line += aFlexController.min.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                    line += " ";
+                    line += aFlexController.max.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                    line += " \"";
+                    line += aFlexController.theName;
+                    line += "\"";
+                    theOutputFileStreamWriter.WriteLine(line);
+                }
+            }
+        }
+
+        private void WriteFlexRuleLines()
+        {
+            string line = "";
+
+            // NOTE: All flex rules are correct for teenangst zoey.
+            if (theMdlFileData.theFlexRules is object && theMdlFileData.theFlexRules.Count > 0)
+            {
+                SourceMdlFlexRule aFlexRule;
+                line = "";
+                theOutputFileStreamWriter.WriteLine(line);
+                for (int i = 0, loopTo = theMdlFileData.theFlexDescs.Count - 1; i <= loopTo; i++)
+                {
+                    SourceMdlFlexDesc flexDesc;
+                    flexDesc = theMdlFileData.theFlexDescs[i];
+                    if (!flexDesc.theDescIsUsedByFlex && flexDesc.theDescIsUsedByFlexRule)
+                    {
+                        line = Constants.vbTab;
+                        line += "localvar ";
+                        line += flexDesc.theName;
+                        theOutputFileStreamWriter.WriteLine(line);
+                    }
+                }
+
+                for (int i = 0, loopTo1 = theMdlFileData.theFlexRules.Count - 1; i <= loopTo1; i++)
+                {
+                    aFlexRule = theMdlFileData.theFlexRules[i];
+                    line = GetFlexRule(aFlexRule);
+                    theOutputFileStreamWriter.WriteLine(line);
+                }
+            }
+        }
+
+        // #define clamp(val, min, max) (((val) > (max)) ? (max) : (((val) < (min)) ? (min) : (val)))
+        private double Clamp(double val, double min, double max)
+        {
+            if (val > max)
+            {
+                return max;
+            }
+            else if (val < min)
+            {
+                return min;
+            }
+            else
+            {
+                return val;
+            }
+        }
+
+        // inline float RemapValClamped( float val, float A, float B, float C, float D)
+        // {
+        // if ( A == B )
+        // return val >= B ? D : C;
+        // float cVal = (val - A) / (B - A);
+        // cVal = clamp( cVal, 0.0f, 1.0f );
+
+        // return C + (D - C) * cVal;
+        // }
+        private double RemapValClamped(double val, double A, double B, double C, double D)
+        {
+            if (A == B)
+            {
+                return 0d;
+            }
+
+            double cVal;
+            cVal = (val - A) / (B - A);
+            cVal = Clamp(cVal, 0.0d, 1.0d);
+            return C + (D - C) * cVal;
+        }
+
+        private string GetFlexRule(SourceMdlFlexRule aFlexRule)
+        {
+            string flexRuleEquation;
+            flexRuleEquation = Constants.vbTab;
+            flexRuleEquation += "%";
+            flexRuleEquation += theMdlFileData.theFlexDescs[aFlexRule.flexIndex].theName;
+            flexRuleEquation += " = ";
+            if (aFlexRule.theFlexOps is object && aFlexRule.theFlexOps.Count > 0)
+            {
+                SourceMdlFlexOp aFlexOp;
+
+                // Convert to infix notation.
+
+                var stack = new Stack<IntermediateExpression>();
+                string rightExpr;
+                string leftExpr;
+                for (int i = 0, loopTo = aFlexRule.theFlexOps.Count - 1; i <= loopTo; i++)
+                {
+                    aFlexOp = aFlexRule.theFlexOps[i];
+                    if (aFlexOp.op == SourceMdlFlexOp.STUDIO_CONST)
+                    {
+                        stack.Push(new IntermediateExpression(Math.Round(aFlexOp.value, 6).ToString("0.######", Program.TheApp.InternalNumberFormat), 10));
+                    }
+                    else if (aFlexOp.op == SourceMdlFlexOp.STUDIO_FETCH1)
+                    {
+                        // int m = pFlexcontroller( (LocalFlexController_t)pops->d.index)->localToGlobal;
+                        // stack[k] = src[m];
+                        // k++; 
+                        stack.Push(new IntermediateExpression(theMdlFileData.theFlexControllers[aFlexOp.index].theName, 10));
+                    }
+                    else if (aFlexOp.op == SourceMdlFlexOp.STUDIO_FETCH2)
+                    {
+                        stack.Push(new IntermediateExpression("%" + theMdlFileData.theFlexDescs[aFlexOp.index].theName, 10));
+                    }
+                    else if (aFlexOp.op == SourceMdlFlexOp.STUDIO_ADD)
+                    {
+                        var rightIntermediate = stack.Pop();
+                        var leftIntermediate = stack.Pop();
+                        string newExpr = Convert.ToString(leftIntermediate.theExpression) + " + " + Convert.ToString(rightIntermediate.theExpression);
+                        stack.Push(new IntermediateExpression(newExpr, 1));
+                    }
+                    else if (aFlexOp.op == SourceMdlFlexOp.STUDIO_SUB)
+                    {
+                        var rightIntermediate = stack.Pop();
+                        var leftIntermediate = stack.Pop();
+                        string newExpr = Convert.ToString(leftIntermediate.theExpression) + " - " + Convert.ToString(rightIntermediate.theExpression);
+                        stack.Push(new IntermediateExpression(newExpr, 1));
+                    }
+                    else if (aFlexOp.op == SourceMdlFlexOp.STUDIO_MUL)
+                    {
+                        var rightIntermediate = stack.Pop();
+                        if (rightIntermediate.thePrecedence < 2)
+                        {
+                            rightExpr = "(" + Convert.ToString(rightIntermediate.theExpression) + ")";
+                        }
+                        else
+                        {
+                            rightExpr = rightIntermediate.theExpression;
+                        }
+
+                        var leftIntermediate = stack.Pop();
+                        if (leftIntermediate.thePrecedence < 2)
+                        {
+                            leftExpr = "(" + Convert.ToString(leftIntermediate.theExpression) + ")";
+                        }
+                        else
+                        {
+                            leftExpr = leftIntermediate.theExpression;
+                        }
+
+                        string newExpr = leftExpr + " * " + rightExpr;
+                        stack.Push(new IntermediateExpression(newExpr, 2));
+                    }
+                    else if (aFlexOp.op == SourceMdlFlexOp.STUDIO_DIV)
+                    {
+                        var rightIntermediate = stack.Pop();
+                        if (rightIntermediate.thePrecedence < 2)
+                        {
+                            rightExpr = "(" + Convert.ToString(rightIntermediate.theExpression) + ")";
+                        }
+                        else
+                        {
+                            rightExpr = rightIntermediate.theExpression;
+                        }
+
+                        var leftIntermediate = stack.Pop();
+                        if (leftIntermediate.thePrecedence < 2)
+                        {
+                            leftExpr = "(" + Convert.ToString(leftIntermediate.theExpression) + ")";
+                        }
+                        else
+                        {
+                            leftExpr = leftIntermediate.theExpression;
+                        }
+
+                        string newExpr = leftExpr + " / " + rightExpr;
+                        stack.Push(new IntermediateExpression(newExpr, 2));
+                    }
+                    else if (aFlexOp.op == SourceMdlFlexOp.STUDIO_NEG)
+                    {
+                        var rightIntermediate = stack.Pop();
+                        string newExpr = "-" + rightIntermediate.theExpression;
+                        stack.Push(new IntermediateExpression(newExpr, 10));
+                    }
+                    else if (aFlexOp.op == SourceMdlFlexOp.STUDIO_EXP)
+                    {
+                        int ignoreThisOpBecauseItIsMistakeToBeHere = 4242;
+                    }
+                    else if (aFlexOp.op == SourceMdlFlexOp.STUDIO_OPEN)
+                    {
+                        int ignoreThisOpBecauseItIsMistakeToBeHere = 4242;
+                    }
+                    else if (aFlexOp.op == SourceMdlFlexOp.STUDIO_CLOSE)
+                    {
+                        int ignoreThisOpBecauseItIsMistakeToBeHere = 4242;
+                    }
+                    else if (aFlexOp.op == SourceMdlFlexOp.STUDIO_COMMA)
+                    {
+                        int ignoreThisOpBecauseItIsMistakeToBeHere = 4242;
+                    }
+                    else if (aFlexOp.op == SourceMdlFlexOp.STUDIO_MAX)
+                    {
+                        var rightIntermediate = stack.Pop();
+                        if (rightIntermediate.thePrecedence < 5)
+                        {
+                            rightExpr = "(" + Convert.ToString(rightIntermediate.theExpression) + ")";
+                        }
+                        else
+                        {
+                            rightExpr = rightIntermediate.theExpression;
+                        }
+
+                        var leftIntermediate = stack.Pop();
+                        if (leftIntermediate.thePrecedence < 5)
+                        {
+                            leftExpr = "(" + Convert.ToString(leftIntermediate.theExpression) + ")";
+                        }
+                        else
+                        {
+                            leftExpr = leftIntermediate.theExpression;
+                        }
+
+                        string newExpr = " max(" + leftExpr + ", " + rightExpr + ")";
+                        stack.Push(new IntermediateExpression(newExpr, 5));
+                    }
+                    else if (aFlexOp.op == SourceMdlFlexOp.STUDIO_MIN)
+                    {
+                        var rightIntermediate = stack.Pop();
+                        if (rightIntermediate.thePrecedence < 5)
+                        {
+                            rightExpr = "(" + Convert.ToString(rightIntermediate.theExpression) + ")";
+                        }
+                        else
+                        {
+                            rightExpr = rightIntermediate.theExpression;
+                        }
+
+                        var leftIntermediate = stack.Pop();
+                        if (leftIntermediate.thePrecedence < 5)
+                        {
+                            leftExpr = "(" + Convert.ToString(leftIntermediate.theExpression) + ")";
+                        }
+                        else
+                        {
+                            leftExpr = leftIntermediate.theExpression;
+                        }
+
+                        string newExpr = " min(" + leftExpr + ", " + rightExpr + ")";
+                        stack.Push(new IntermediateExpression(newExpr, 5));
+                    }
+                    // TODO: SourceMdlFlexOp.STUDIO_2WAY_0
+                    // ElseIf aFlexOp.op = SourceMdlFlexOp.STUDIO_2WAY_0 Then
+                    // '	'#define STUDIO_2WAY_0	15	// Fetch a value from a 2 Way slider for the 1st value RemapVal( 0.0, 0.5, 0.0, 1.0 )
+                    // '	'int m = pFlexcontroller( (LocalFlexController_t)pops->d.index )->localToGlobal;
+                    // '	'stack[ k ] = RemapValClamped( src[m], -1.0f, 0.0f, 1.0f, 0.0f );
+                    // '	'k++; 
+                    // Dim newExpression As String
+                    // 'newExpression = CStr(Me.RemapValClamped(aFlexOp.value, -1, 0, 1, 0))
+                    // newExpression = "RemapValClamped(" + theSourceEngineModel.theMdlFileHeader.theFlexControllers(aFlexOp.index).theName + ", -1, 0, 1, 0)"
+                    // stack.Push(New IntermediateExpression(newExpression, 5))
+                    // TODO: SourceMdlFlexOp.STUDIO_2WAY_1
+                    // ElseIf aFlexOp.op = SourceMdlFlexOp.STUDIO_2WAY_1 Then
+                    // '#define STUDIO_2WAY_1	16	// Fetch a value from a 2 Way slider for the 2nd value RemapVal( 0.5, 1.0, 0.0, 1.0 )
+                    // 'int m = pFlexcontroller( (LocalFlexController_t)pops->d.index )->localToGlobal;
+                    // 'stack[ k ] = RemapValClamped( src[m], 0.0f, 1.0f, 0.0f, 1.0f );
+                    // 'k++; 
+                    // Dim newExpression As String
+                    // 'newExpression = CStr(Me.RemapValClamped(aFlexOp.value, 0, 1, 0, 1))
+                    // newExpression = "RemapValClamped(" + theSourceEngineModel.theMdlFileHeader.theFlexControllers(aFlexOp.index).theName + ", 0, 1, 0, 1)"
+                    // stack.Push(New IntermediateExpression(newExpression, 5))
+                    // TODO: SourceMdlFlexOp.STUDIO_NWAY
+                    // ElseIf aFlexOp.op = SourceMdlFlexOp.STUDIO_NWAY Then
+                    // Dim x As Integer = 42
+                    else if (aFlexOp.op == SourceMdlFlexOp.STUDIO_COMBO)
+                    {
+                        // #define STUDIO_COMBO	18	// Perform a combo operation (essentially multiply the last N values on the stack)
+                        // int m = pops->d.index;
+                        // int km = k - m;
+                        // for ( int i = km + 1; i < k; ++i )
+                        // {
+                        // stack[ km ] *= stack[ i ];
+                        // }
+                        // k = k - m + 1;
+                        int count;
+                        string newExpression;
+                        IntermediateExpression intermediateExp;
+                        count = aFlexOp.index;
+                        newExpression = "";
+                        intermediateExp = stack.Pop();
+                        newExpression += intermediateExp.theExpression;
+                        for (int j = 2, loopTo1 = count; j <= loopTo1; j++)
+                        {
+                            intermediateExp = stack.Pop();
+                            newExpression += " * " + intermediateExp.theExpression;
+                        }
+
+                        newExpression = "(" + newExpression + ")";
+                        stack.Push(new IntermediateExpression(newExpression, 5));
+                    }
+                    else if (aFlexOp.op == SourceMdlFlexOp.STUDIO_DOMINATE)
+                    {
+                        // int m = pops->d.index;
+                        // int km = k - m;
+                        // float dv = stack[ km ];
+                        // for ( int i = km + 1; i < k; ++i )
+                        // {
+                        // dv *= stack[ i ];
+                        // }
+                        // stack[ km - 1 ] *= 1.0f - dv;
+                        // k -= m;
+                        int count;
+                        string newExpression;
+                        IntermediateExpression intermediateExp;
+                        count = aFlexOp.index;
+                        newExpression = "";
+                        intermediateExp = stack.Pop();
+                        newExpression += intermediateExp.theExpression;
+                        for (int j = 2, loopTo2 = count; j <= loopTo2; j++)
+                        {
+                            intermediateExp = stack.Pop();
+                            newExpression += " * " + intermediateExp.theExpression;
+                        }
+
+                        intermediateExp = stack.Pop();
+                        newExpression = intermediateExp.theExpression + " * (1 - " + newExpression + ")";
+                        newExpression = "(" + newExpression + ")";
+                        stack.Push(new IntermediateExpression(newExpression, 5));
+                    }
+                    // TODO: SourceMdlFlexOp.STUDIO_DME_LOWER_EYELID
+                    // ElseIf aFlexOp.op = SourceMdlFlexOp.STUDIO_DME_LOWER_EYELID Then
+                    // Dim x As Integer = 42
+                    // TODO: SourceMdlFlexOp.STUDIO_DME_UPPER_EYELID
+                    // ElseIf aFlexOp.op = SourceMdlFlexOp.STUDIO_DME_UPPER_EYELID Then
+                    // Dim x As Integer = 42
+                    else
+                    {
+                        stack.Clear();
+                        break;
+                    }
+                }
+
+                // The loop above leaves the final expression on the top of the stack.
+                if (stack.Count == 1)
+                {
+                    flexRuleEquation += stack.Peek().theExpression;
+                }
+                else if (stack.Count == 0 || stack.Count > 1)
+                {
+                    flexRuleEquation = "// [Decompiler failed to parse expression. Please report the error with the following info: this qc file, the mdl filename that was decompiled, and where the mdl file was found (e.g. the game's name or a web link).]";
+                }
+                else
+                {
+                    flexRuleEquation = "// [Empty flex rule found and ignored.]";
+                }
+            }
+
+            return flexRuleEquation;
+        }
+
+        public void WriteGroupLod()
+        {
+            WriteLodCommand();
+        }
+
+        private void WriteLodCommand()
+        {
+            string line = "";
+
+            // NOTE: Data is from VTX file.
+            // $lod 10
+            // {
+            // replacemodel "producer_model_merged.dmx" "lod1_producer_model_merged.dmx"
+            // }
+            // $lod 15
+            // {
+            // replacemodel "producer_model_merged.dmx" "lod2_producer_model_merged.dmx"
+            // }
+            // $lod 40
+            // {
+            // replacemodel "producer_model_merged.dmx" "lod3_producer_model_merged.dmx"
+            // }
+            if (theVtxFileData is object && theMdlFileData.theBodyParts is object)
+            {
+                if (theVtxFileData.theVtxBodyParts is null)
+                {
+                    return;
+                }
+
+                if (theVtxFileData.theVtxBodyParts[0].theVtxModels is null)
+                {
+                    return;
+                }
+
+                if (theVtxFileData.theVtxBodyParts[0].theVtxModels[0].theVtxModelLods is null)
+                {
+                    return;
+                }
+
+                SourceVtxBodyPart07 aBodyPart;
+                SourceVtxModel07 aVtxModel;
+                SourceMdlModel aBodyModel;
+                int lodIndex;
+                LodQcInfo aLodQcInfo;
+                List<LodQcInfo> aLodQcInfoList;
+                SortedList<float, List<LodQcInfo>> aLodList;
+                SortedList<float, bool> aLodListOfFacialFlags;
+                float switchPoint;
+                aLodList = new SortedList<float, List<LodQcInfo>>();
+                aLodListOfFacialFlags = new SortedList<float, bool>();
+                for (int bodyPartIndex = 0, loopTo = theVtxFileData.theVtxBodyParts.Count - 1; bodyPartIndex <= loopTo; bodyPartIndex++)
+                {
+                    aBodyPart = theVtxFileData.theVtxBodyParts[bodyPartIndex];
+                    if (aBodyPart.theVtxModels is object)
+                    {
+                        for (int modelIndex = 0, loopTo1 = aBodyPart.theVtxModels.Count - 1; modelIndex <= loopTo1; modelIndex++)
+                        {
+                            aVtxModel = aBodyPart.theVtxModels[modelIndex];
+                            if (aVtxModel.theVtxModelLods is object)
+                            {
+                                aBodyModel = theMdlFileData.theBodyParts[bodyPartIndex].theModels[modelIndex];
+                                // NOTE: This check is for skipping "blank" bodygroup. Example: the third bodygroup of L4D2's "infected/common_female_tshirt_skirt.mdl".
+                                if (aBodyModel.name[0] == '\0' && aVtxModel.theVtxModelLods[0].theVtxMeshes is null)
+                                {
+                                    continue;
+                                }
+
+                                // NOTE: Start loop at 1 to skip first LOD, which isn't needed for the $lod command.
+                                var loopTo2 = theVtxFileData.lodCount - 1;
+                                for (lodIndex = 1; lodIndex <= loopTo2; lodIndex++)
+                                {
+                                    // TODO: Why would this count be different than the file header count?
+                                    if (lodIndex >= aVtxModel.theVtxModelLods.Count)
+                                    {
+                                        break;
+                                    }
+
+                                    switchPoint = aVtxModel.theVtxModelLods[lodIndex].switchPoint;
+                                    if (!aLodList.ContainsKey(switchPoint))
+                                    {
+                                        aLodQcInfoList = new List<LodQcInfo>();
+                                        aLodList.Add(switchPoint, aLodQcInfoList);
+                                        aLodListOfFacialFlags.Add(switchPoint, aVtxModel.theVtxModelLods[lodIndex].theVtxModelLodUsesFacial);
+                                    }
+                                    else
+                                    {
+                                        aLodQcInfoList = aLodList[switchPoint];
+                                    }
+
+                                    aBodyModel.theSmdFileNames[0] = SourceFileNamesModule.CreateBodyGroupSmdFileName(aBodyModel.theSmdFileNames[0], bodyPartIndex, modelIndex, 0, theModelName, Conversions.ToString(theMdlFileData.theBodyParts[bodyPartIndex].theModels[modelIndex].name));
+                                    aBodyModel.theSmdFileNames[lodIndex] = SourceFileNamesModule.CreateBodyGroupSmdFileName(aBodyModel.theSmdFileNames[lodIndex], bodyPartIndex, modelIndex, lodIndex, theModelName, Conversions.ToString(theMdlFileData.theBodyParts[bodyPartIndex].theModels[modelIndex].name));
+                                    aLodQcInfo = new LodQcInfo();
+                                    aLodQcInfo.referenceFileName = aBodyModel.theSmdFileNames[0];
+                                    aLodQcInfo.lodFileName = aBodyModel.theSmdFileNames[lodIndex];
+                                    aLodQcInfoList.Add(aLodQcInfo);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                line = "";
+                theOutputFileStreamWriter.WriteLine(line);
+                List<LodQcInfo> lodQcInfoListOfShadowLod;
+                lodQcInfoListOfShadowLod = null;
+                lodIndex = 0;
+                for (int lodListIndex = 0, loopTo3 = aLodList.Count - 1; lodListIndex <= loopTo3; lodListIndex++)
+                {
+                    switchPoint = aLodList.Keys[lodListIndex];
+                    if (switchPoint == -1)
+                    {
+                        // Skip writing $shadowlod. Write it last after this loop.
+                        lodQcInfoListOfShadowLod = aLodList.Values[lodListIndex];
+                        continue;
+                    }
+
+                    lodIndex += 1;
+                    aLodQcInfoList = aLodList.Values[lodListIndex];
+                    if (Program.TheApp.Settings.DecompileQcUseMixedCaseForKeywordsIsChecked)
+                    {
+                        line = "$LOD ";
+                    }
+                    else
+                    {
+                        line = "$lod ";
+                    }
+
+                    line += switchPoint.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                    theOutputFileStreamWriter.WriteLine(line);
+                    line = "{";
+                    theOutputFileStreamWriter.WriteLine(line);
+                    WriteLodOptions(lodIndex, aLodListOfFacialFlags.Values[lodListIndex], aLodQcInfoList);
+                    line = "}";
+                    theOutputFileStreamWriter.WriteLine(line);
+                }
+
+                // NOTE: As a requirement for the compiler, write $shadowlod last.
+                lodIndex = aLodList.Count - 1;
+                if (lodQcInfoListOfShadowLod is object)
+                {
+                    // // Shadow lod reserves -1 as switch value
+                    // // which uniquely identifies a shadow lod
+                    // newLOD.switchValue = -1.0f;
+                    if (Program.TheApp.Settings.DecompileQcUseMixedCaseForKeywordsIsChecked)
+                    {
+                        line = "$ShadowLOD";
+                    }
+                    else
+                    {
+                        line = "$shadowlod";
+                    }
+
+                    theOutputFileStreamWriter.WriteLine(line);
+                    line = "{";
+                    theOutputFileStreamWriter.WriteLine(line);
+                    WriteLodOptions(lodIndex, false, lodQcInfoListOfShadowLod);
+                    line = "}";
+                    theOutputFileStreamWriter.WriteLine(line);
+                }
+            }
+        }
+
+        private void WriteLodOptions(int lodIndex, bool lodUsesFacial, List<LodQcInfo> aLodQcInfoList)
+        {
+            string line = "";
+            LodQcInfo aLodQcInfo;
+            for (int i = 0, loopTo = aLodQcInfoList.Count - 1; i <= loopTo; i++)
+            {
+                aLodQcInfo = aLodQcInfoList[i];
+                if (string.IsNullOrEmpty(aLodQcInfo.lodFileName))
+                {
+                    line = Constants.vbTab;
+                    line += "removemodel ";
+                    line += "\"";
+                    line += aLodQcInfo.referenceFileName;
+                    line += "\"";
+                }
+                else
+                {
+                    line = Constants.vbTab;
+                    line += "replacemodel ";
+                    line += "\"";
+                    line += aLodQcInfo.referenceFileName;
+                    line += "\" \"";
+                    line += aLodQcInfo.lodFileName;
+                    line += "\"";
+                }
+
+                theOutputFileStreamWriter.WriteLine(line);
+            }
+
+            try
+            {
+                SourceVtxMaterialReplacementList07 materialReplacementList;
+                materialReplacementList = theVtxFileData.theVtxMaterialReplacementLists[lodIndex];
+                if (materialReplacementList.theVtxMaterialReplacements is object)
+                {
+                    foreach (SourceVtxMaterialReplacement07 materialReplacement in materialReplacementList.theVtxMaterialReplacements)
+                    {
+                        line = Constants.vbTab;
+                        line += "replacematerial ";
+                        line += "\"";
+                        line += theMdlFileData.theModifiedTextureFileNames[materialReplacement.materialIndex];
+                        line += "\" \"";
+                        line += materialReplacement.theName;
+                        line += "\"";
+                        theOutputFileStreamWriter.WriteLine(line);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                int debug = 4242;
+            }
+
+            foreach (SourceMdlBone aBone in theMdlFileData.theBones)
+            {
+                if (aBone.parentBoneIndex >= 0 && (lodIndex == 1 && (aBone.flags & SourceMdlBone.BONE_USED_BY_VERTEX_LOD1) == 0 || lodIndex == 2 && (aBone.flags & SourceMdlBone.BONE_USED_BY_VERTEX_LOD2) == 0 || lodIndex == 3 && (aBone.flags & SourceMdlBone.BONE_USED_BY_VERTEX_LOD3) == 0 || lodIndex == 4 && (aBone.flags & SourceMdlBone.BONE_USED_BY_VERTEX_LOD4) == 0 || lodIndex == 5 && (aBone.flags & SourceMdlBone.BONE_USED_BY_VERTEX_LOD5) == 0 || lodIndex == 6 && (aBone.flags & SourceMdlBone.BONE_USED_BY_VERTEX_LOD6) == 0 || lodIndex == 7 && (aBone.flags & SourceMdlBone.BONE_USED_BY_VERTEX_LOD7) == 0))
+
+
+
+
+
+
+                {
+                    // replacebone "ValveBiped.Bip01_Neck1" "ValveBiped.Bip01_Head1"
+                    line = Constants.vbTab;
+                    line += "replacebone ";
+                    line += "\"";
+                    line += aBone.theName;
+                    line += "\" \"";
+                    line += theMdlFileData.theBones[aBone.parentBoneIndex].theName;
+                    line += "\"";
+                    theOutputFileStreamWriter.WriteLine(line);
+                }
+            }
+
+            line = Constants.vbTab;
+            if (lodUsesFacial)
+            {
+                if (Program.TheApp.Settings.DecompileQcUseMixedCaseForKeywordsIsChecked)
+                {
+                    line += "Facial";
+                }
+                else
+                {
+                    line += "facial";
+                }
+            }
+            else if (Program.TheApp.Settings.DecompileQcUseMixedCaseForKeywordsIsChecked)
+            {
+                line += "NoFacial";
+            }
+            else
+            {
+                line += "nofacial";
+            }
+
+            theOutputFileStreamWriter.WriteLine(line);
+            if ((theMdlFileData.flags & SourceMdlFileData.STUDIOHDR_FLAGS_USE_SHADOWLOD_MATERIALS) > 0)
+            {
+                theOutputFileStreamWriter.WriteLine();
+                if (Program.TheApp.Settings.DecompileQcUseMixedCaseForKeywordsIsChecked)
+                {
+                    line = "Use_ShadowLOD_Materials";
+                }
+                else
+                {
+                    line = "use_shadowlod_materials";
+                }
+
+                theOutputFileStreamWriter.WriteLine(line);
+            }
+        }
+
+        public void WriteNoForcedFadeCommand()
+        {
+            string line = "";
+
+            // $noforcedfade
+            if ((theMdlFileData.flags & SourceMdlFileData.STUDIOHDR_FLAGS_NO_FORCED_FADE) > 0)
+            {
+                theOutputFileStreamWriter.WriteLine();
+                if (Program.TheApp.Settings.DecompileQcUseMixedCaseForKeywordsIsChecked)
+                {
+                    line = "$NoForcedFade";
+                }
+                else
+                {
+                    line = "$noforcedfade";
+                }
+
+                theOutputFileStreamWriter.WriteLine(line);
+            }
+        }
+
+        public void WriteForcePhonemeCrossfadeCommand()
+        {
+            string line = "";
+
+            // $forcephonemecrossfade
+            if ((theMdlFileData.flags & SourceMdlFileData.STUDIOHDR_FLAGS_FORCE_PHONEME_CROSSFADE) > 0)
+            {
+                theOutputFileStreamWriter.WriteLine();
+                if (Program.TheApp.Settings.DecompileQcUseMixedCaseForKeywordsIsChecked)
+                {
+                    line = "$ForcePhonemeCrossFade";
+                }
+                else
+                {
+                    line = "$forcephonemecrossfade";
+                }
+
+                theOutputFileStreamWriter.WriteLine(line);
+            }
+        }
+
+        public void WritePoseParameterCommand()
+        {
+            string line = "";
+
+            // $poseparameter body_pitch -90.00 90.00 360.00
+            // $poseparameter body_yaw -90.00 90.00 360.00
+            // $poseparameter head_pitch -90.00 90.00 360.00
+            // $poseparameter head_yaw -90.00 90.00 360.00
+            if (theMdlFileData.thePoseParamDescs is object)
+            {
+                line = "";
+                theOutputFileStreamWriter.WriteLine(line);
+                for (int i = 0, loopTo = theMdlFileData.thePoseParamDescs.Count - 1; i <= loopTo; i++)
+                {
+                    SourceMdlPoseParamDesc aPoseParamDesc;
+                    aPoseParamDesc = theMdlFileData.thePoseParamDescs[i];
+                    if (Program.TheApp.Settings.DecompileQcUseMixedCaseForKeywordsIsChecked)
+                    {
+                        line = "$PoseParameter \"";
+                    }
+                    else
+                    {
+                        line = "$poseparameter \"";
+                    }
+
+                    line += aPoseParamDesc.theName;
+                    line += "\" ";
+                    line += aPoseParamDesc.startingValue.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                    line += " ";
+                    line += aPoseParamDesc.endingValue.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                    line += " loop ";
+                    line += aPoseParamDesc.loopingRange.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                    theOutputFileStreamWriter.WriteLine(line);
+                }
+            }
+        }
+
+        public void WriteAmbientBoostCommand()
+        {
+            string line = "";
+
+            // $ambientboost
+            if ((theMdlFileData.flags & SourceMdlFileData.STUDIOHDR_FLAGS_AMBIENT_BOOST) > 0)
+            {
+                theOutputFileStreamWriter.WriteLine();
+                if (Program.TheApp.Settings.DecompileQcUseMixedCaseForKeywordsIsChecked)
+                {
+                    line = "$AmbientBoost";
+                }
+                else
+                {
+                    line = "$ambientboost";
+                }
+
+                theOutputFileStreamWriter.WriteLine(line);
+            }
+        }
+
+        public void WriteOpaqueCommand()
+        {
+            string line = "";
+
+            // $mostlyopaque
+            // $opaque
+            if ((theMdlFileData.flags & SourceMdlFileData.STUDIOHDR_FLAGS_FORCE_OPAQUE) > 0)
+            {
+                theOutputFileStreamWriter.WriteLine();
+                if (Program.TheApp.Settings.DecompileQcUseMixedCaseForKeywordsIsChecked)
+                {
+                    line = "$Opaque";
+                }
+                else
+                {
+                    line = "$opaque";
+                }
+
+                theOutputFileStreamWriter.WriteLine(line);
+            }
+            else if ((theMdlFileData.flags & SourceMdlFileData.STUDIOHDR_FLAGS_TRANSLUCENT_TWOPASS) > 0)
+            {
+                theOutputFileStreamWriter.WriteLine();
+                if (Program.TheApp.Settings.DecompileQcUseMixedCaseForKeywordsIsChecked)
+                {
+                    line = "$MostlyOpaque";
+                }
+                else
+                {
+                    line = "$mostlyopaque";
+                }
+
+                theOutputFileStreamWriter.WriteLine(line);
+            }
+        }
+
+        public void WriteObsoleteCommand()
+        {
+            string line = "";
+
+            // $obsolete
+            if ((theMdlFileData.flags & SourceMdlFileData.STUDIOHDR_FLAGS_OBSOLETE) > 0)
+            {
+                theOutputFileStreamWriter.WriteLine();
+                if (Program.TheApp.Settings.DecompileQcUseMixedCaseForKeywordsIsChecked)
+                {
+                    line = "$Obsolete";
+                }
+                else
+                {
+                    line = "$obsolete";
+                }
+
+                theOutputFileStreamWriter.WriteLine(line);
+            }
+        }
+
+        public void WriteCdMaterialsCommand()
+        {
+            string line = "";
+            List<string> texturePaths;
+            texturePaths = theMdlFileData.theModifiedTexturePaths;
+
+            // $cdmaterials "models\survivors\producer\"
+            // $cdmaterials "models\survivors\"
+            // $cdmaterials ""
+            if (texturePaths is object)
+            {
+                line = "";
+                theOutputFileStreamWriter.WriteLine(line);
+                for (int i = 0, loopTo = texturePaths.Count - 1; i <= loopTo; i++)
+                {
+                    string aTexturePath;
+                    aTexturePath = texturePaths[i];
+                    // NOTE: Write out all stored paths, even if null or empty strings, because Crowbar should show what was stored.
+                    if (Program.TheApp.Settings.DecompileQcUseMixedCaseForKeywordsIsChecked)
+                    {
+                        line = "$CDMaterials ";
+                    }
+                    else
+                    {
+                        line = "$cdmaterials ";
+                    }
+
+                    line += "\"";
+                    line += aTexturePath;
+                    line += "\"";
+                    theOutputFileStreamWriter.WriteLine(line);
+                }
+            }
+        }
+
+        public void WriteTextureGroupCommand()
+        {
+            string line = "";
+            List<string> textureFileNames;
+            textureFileNames = theMdlFileData.theModifiedTextureFileNames;
+            if (theMdlFileData.theSkinFamilies is object && theMdlFileData.theSkinFamilies.Count > 0 && textureFileNames is object && textureFileNames.Count > 0 && theMdlFileData.skinReferenceCount > 0)
+            {
+                List<List<short>> processedSkinFamilies;
+                if (Program.TheApp.Settings.DecompileQcOnlyChangedMaterialsInTextureGroupLinesIsChecked)
+                {
+                    processedSkinFamilies = GetSkinFamiliesOfChangedMaterials(theMdlFileData.theSkinFamilies);
+                }
+                else
+                {
+                    processedSkinFamilies = theMdlFileData.theSkinFamilies;
+                }
+
+                List<List<string>> skinFamiliesOfTextureFileNames;
+                skinFamiliesOfTextureFileNames = new List<List<string>>(processedSkinFamilies.Count);
+                int skinReferenceCount;
+                skinReferenceCount = processedSkinFamilies[0].Count;
+                for (int i = 0, loopTo = processedSkinFamilies.Count - 1; i <= loopTo; i++)
+                {
+                    List<short> aSkinFamily;
+                    aSkinFamily = processedSkinFamilies[i];
+                    var textureFileNamesForSkinFamily = new List<string>(skinReferenceCount);
+                    for (int j = 0, loopTo1 = skinReferenceCount - 1; j <= loopTo1; j++)
+                    {
+                        string aTextureFileName;
+                        aTextureFileName = textureFileNames[aSkinFamily[j]];
+                        textureFileNamesForSkinFamily.Add(aTextureFileName);
+                    }
+
+                    skinFamiliesOfTextureFileNames.Add(textureFileNamesForSkinFamily);
+                }
+
+                if (!Program.TheApp.Settings.DecompileQcOnlyChangedMaterialsInTextureGroupLinesIsChecked || skinFamiliesOfTextureFileNames.Count > 1)
+                {
+                    theOutputFileStreamWriter.WriteLine();
+                    if (Program.TheApp.Settings.DecompileQcUseMixedCaseForKeywordsIsChecked)
+                    {
+                        line = "$TextureGroup \"skinfamilies\"";
+                    }
+                    else
+                    {
+                        line = "$texturegroup \"skinfamilies\"";
+                    }
+
+                    theOutputFileStreamWriter.WriteLine(line);
+                    line = "{";
+                    theOutputFileStreamWriter.WriteLine(line);
+                    List<string> skinFamilyLines;
+                    skinFamilyLines = GetTextureGroupSkinFamilyLines(skinFamiliesOfTextureFileNames);
+                    for (int skinFamilyLineIndex = 0, loopTo2 = skinFamilyLines.Count - 1; skinFamilyLineIndex <= loopTo2; skinFamilyLineIndex++)
+                        theOutputFileStreamWriter.WriteLine(skinFamilyLines[skinFamilyLineIndex]);
+                    line = "}";
+                    theOutputFileStreamWriter.WriteLine(line);
+                }
+            }
+        }
+
+        public void WriteTextureFileNameComments()
+        {
+            // // Model uses material "producer_head.vmt"
+            // // Model uses material "producer_body.vmt"
+            // // Model uses material "producer_head_it.vmt"
+            // // Model uses material "producer_body_it.vmt"
+            // // Model uses material "models/survivors/producer/producer_hair.vmt"
+            // // Model uses material "models/survivors/producer/producer_eyeball_l.vmt"
+            // // Model uses material "models/survivors/producer/producer_eyeball_r.vmt"
+            if (Program.TheApp.Settings.DecompileDebugInfoFilesIsChecked && theMdlFileData.theTextures is object)
+            {
+                string line;
+                line = "";
+                theOutputFileStreamWriter.WriteLine(line);
+                line = "// This list shows the VMT file names used in the SMD files.";
+                theOutputFileStreamWriter.WriteLine(line);
+                for (int j = 0, loopTo = theMdlFileData.theTextures.Count - 1; j <= loopTo; j++)
+                {
+                    SourceMdlTexture aTexture;
+                    aTexture = theMdlFileData.theTextures[j];
+                    line = "// \"";
+                    line += aTexture.thePathFileName;
+                    line += ".vmt\"";
+                    theOutputFileStreamWriter.WriteLine(line);
+                }
+            }
+        }
+
+        public void WriteAttachmentCommand()
+        {
+            string line = "";
+            double offsetX;
+            double offsetY;
+            double offsetZ;
+            var angleX = default(double);
+            var angleY = default(double);
+            var angleZ = default(double);
+
+            // $attachment "eyes" "ValveBiped.Bip01_Head1" 3.42 -2.36 0.05 rotate 0.00 -89.37 -90.00
+            // $attachment "mouth" "ValveBiped.Bip01_Head1" 0.71 -5.15 -0.13 rotate -0.00 -80.00 -90.00
+            // $attachment "survivor_light" "ValveBiped.Bip01_Spine2" 5.33 21.31 -0.00 rotate -0.00 -0.00 -0.00
+            // $attachment "forward" "ValveBiped.forward" 0.00 -0.00 0.00 rotate 0.00 0.00 0.00
+            // $attachment "pistol" "ValveBiped.Bip01_R_Thigh" -2.95 1.84 -4.61 rotate -3.66 -0.47 91.70
+            // $attachment "L_weapon_bone" "ValveBiped.L_weapon_bone" 0.00 -0.00 0.00 rotate -0.00 0.00 -0.00
+            // $attachment "weapon_bone" "ValveBiped.weapon_bone" 0.00 0.00 0.00 rotate 0.00 0.00 -0.00
+            // $attachment "medkit" "ValveBiped.Bip01_Spine4" -0.65 -2.83 -1.16 rotate 5.03 77.16 0.00
+            // $attachment "primary" "ValveBiped.Bip01_Spine4" 2.71 -4.36 -2.33 rotate -13.70 170.19 174.29
+            // $attachment "attach_R_shoulderBladeAim" "ValveBiped.Bip01_Spine4" -8.88 0.88 -4.51 rotate -90.00 -102.85 0.00
+            // $attachment "attach_L_shoulderBladeAim" "ValveBiped.Bip01_Spine4" -8.88 0.88 3.12 rotate -90.00 -102.85 0.00
+            // $attachment "melee" "ValveBiped.Bip01_Spine4" 2.64 -3.12 4.45 rotate 24.08 175.37 97.14
+            // $attachment "molotov" "ValveBiped.Bip01_Spine" -3.19 -2.44 7.01 rotate -63.44 -74.67 -101.41
+            // $attachment "grenade" "ValveBiped.Bip01_Spine" -0.68 1.17 6.97 rotate -90.00 -175.23 0.00
+            // $attachment "pills" "ValveBiped.Bip01_Spine" -2.63 0.63 -7.56 rotate -41.18 -88.49 -87.05
+            // $attachment "lfoot" "ValveBiped.Bip01_L_Foot" 0.00 4.44 0.00 rotate -0.00 -0.00 -0.00
+            // $attachment "rfoot" "ValveBiped.Bip01_R_Foot" 0.00 4.44 0.00 rotate -0.00 0.00 -0.00
+            // $attachment "muzzle_flash" "ValveBiped.Bip01_L_Hand" 0.00 0.00 0.00 rotate -0.00 0.00 0.00
+            // $attachment "survivor_neck" "ValveBiped.Bip01_Neck1" 0.00 0.00 0.00 rotate 0.00 0.00 -0.00
+            // $attachment "forward" "ValveBiped.forward" 0.00 -0.00 0.00 rotate 0.00 0.00 0.00
+            // $attachment "bleedout" "ValveBiped.Bip01_Pelvis" 8.44 8.88 4.44 rotate -0.00 0.00 0.00
+            // $attachment "survivor_light" "ValveBiped.Bip01_Spine2" 5.33 21.31 -0.00 rotate -0.00 -0.00 -0.00
+            // $attachment "legL_B" "ValveBiped.attachment_bandage_legL" 0.00 0.00 0.00 rotate -90.00 -90.00 0.00
+            // $attachment "armL_B" "ValveBiped.attachment_bandage_armL" 0.00 0.00 0.00 rotate -90.00 -90.00 0.00
+            // $attachment "armL_T" "ValveBiped.attachment_armL_T" 0.00 0.00 0.00 rotate -90.00 -90.00 0.00
+            // $attachment "armR_T" "ValveBiped.attachment_armR_T" 0.00 0.00 0.00 rotate -90.00 -90.00 0.00
+            // $attachment "armL" "ValveBiped.Bip01_L_Forearm" 0.00 0.00 -0.00 rotate -0.00 -0.00 0.00
+            // $attachment "legL" "ValveBiped.Bip01_L_Calf" 0.00 0.00 0.00 rotate -0.00 -0.00 -0.00
+            // $attachment "thighL" "ValveBiped.Bip01_L_Thigh" 0.00 0.00 0.00 rotate -0.00 -0.00 -0.00
+            // $attachment "spine" "ValveBiped.Bip01_Spine" 0.00 0.00 0.00 rotate -90.00 -90.00 0.00
+            if (theMdlFileData.theAttachments is object)
+            {
+                line = "";
+                theOutputFileStreamWriter.WriteLine(line);
+                for (int i = 0, loopTo = theMdlFileData.theAttachments.Count - 1; i <= loopTo; i++)
+                {
+                    SourceMdlAttachment anAttachment;
+                    anAttachment = theMdlFileData.theAttachments[i];
+                    if (Program.TheApp.Settings.DecompileQcUseMixedCaseForKeywordsIsChecked)
+                    {
+                        line = "$Attachment ";
+                    }
+                    else
+                    {
+                        line = "$attachment ";
+                    }
+
+                    if (string.IsNullOrEmpty(anAttachment.theName))
+                    {
+                        line += i.ToString(Program.TheApp.InternalNumberFormat);
+                    }
+                    else
+                    {
+                        line += "\"";
+                        line += anAttachment.theName;
+                        line += "\"";
+                    }
+
+                    line += " \"";
+                    line += theMdlFileData.theBones[anAttachment.localBoneIndex].theName;
+                    line += "\"";
+                    line += " ";
+                    if (theMdlFileData.version == 10)
+                    {
+                        line += anAttachment.attachmentPoint.x.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                        line += " ";
+                        line += anAttachment.attachmentPoint.y.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                        line += " ";
+                        line += anAttachment.attachmentPoint.z.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                    }
+                    else
+                    {
+                        // TheApp.ConvertRotationMatrixToDegrees(anAttachment.localM11, anAttachment.localM12, anAttachment.localM13, anAttachment.localM21, anAttachment.localM22, anAttachment.localM23, anAttachment.localM33, angleX, angleY, angleZ)
+                        // NOTE: This one works with the strange order below.
+                        MathModule.ConvertRotationMatrixToDegrees(anAttachment.localM11, anAttachment.localM21, anAttachment.localM31, anAttachment.localM12, anAttachment.localM22, anAttachment.localM32, anAttachment.localM33, ref angleX, ref angleY, ref angleZ);
+                        offsetX = Math.Round(anAttachment.localM14, 2);
+                        offsetY = Math.Round(anAttachment.localM24, 2);
+                        offsetZ = Math.Round(anAttachment.localM34, 2);
+                        angleX = Math.Round(angleX, 2);
+                        angleY = Math.Round(angleY, 2);
+                        angleZ = Math.Round(angleZ, 2);
+                        line += offsetX.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                        line += " ";
+                        line += offsetY.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                        line += " ";
+                        line += offsetZ.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                        line += " rotate ";
+                        // 'NOTE: Intentionally z,y,x order.
+                        // line += angleZ.ToString()
+                        // line += " "
+                        // line += angleY.ToString()
+                        // line += " "
+                        // line += angleX.ToString()
+                        // NOTE: Intentionally in strange order.
+                        line += angleY.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                        line += " ";
+                        line += (-angleZ).ToString("0.######", Program.TheApp.InternalNumberFormat);
+                        line += " ";
+                        line += (-angleX).ToString("0.######", Program.TheApp.InternalNumberFormat);
+                    }
+
+                    theOutputFileStreamWriter.WriteLine(line);
+                }
+            }
+        }
+
+        public void WriteIncludeModelCommand()
+        {
+            string line = "";
+
+            // $includemodel "survivors/anim_producer.mdl"
+            // $includemodel "survivors/anim_gestures.mdl"
+            if (theMdlFileData.theModelGroups is object)
+            {
+                line = "";
+                theOutputFileStreamWriter.WriteLine(line);
+                for (int i = 0, loopTo = theMdlFileData.theModelGroups.Count - 1; i <= loopTo; i++)
+                {
+                    SourceMdlModelGroup aModelGroup;
+                    aModelGroup = theMdlFileData.theModelGroups[i];
+                    if (Program.TheApp.Settings.DecompileQcUseMixedCaseForKeywordsIsChecked)
+                    {
+                        line = "$IncludeModel ";
+                    }
+                    else
+                    {
+                        line = "$includemodel ";
+                    }
+
+                    line += "\"";
+                    if (aModelGroup.theFileName.StartsWith("models/"))
+                    {
+                        line += aModelGroup.theFileName.Substring(7);
+                    }
+                    else
+                    {
+                        line += aModelGroup.theFileName;
+                    }
+
+                    line += "\"";
+                    theOutputFileStreamWriter.WriteLine(line);
+                }
+            }
+        }
+
+        public void WriteSurfacePropCommand()
+        {
+            string line = "";
+            if (!string.IsNullOrEmpty(theMdlFileData.theSurfacePropName))
+            {
+                line = "";
+                theOutputFileStreamWriter.WriteLine(line);
+
+                // $surfaceprop "flesh"
+                if (Program.TheApp.Settings.DecompileQcUseMixedCaseForKeywordsIsChecked)
+                {
+                    line = "$SurfaceProp ";
+                }
+                else
+                {
+                    line = "$surfaceprop ";
+                }
+
+                line += "\"";
+                line += theMdlFileData.theSurfacePropName;
+                line += "\"";
+                theOutputFileStreamWriter.WriteLine(line);
+            }
+        }
+
+        public void WriteJointSurfacePropCommand()
+        {
+            string line = "";
+
+            // $jointsurfaceprop <bone name> <surfaceprop>
+            // $jointsurfaceprop "ValveBiped.Bip01_L_Toe0"	 "flesh"
+            if (theMdlFileData.theBones is object)
+            {
+                SourceMdlBone aBone;
+                bool emptyLineIsAlreadyWritten;
+                emptyLineIsAlreadyWritten = false;
+                for (int i = 0, loopTo = theMdlFileData.theBones.Count - 1; i <= loopTo; i++)
+                {
+                    aBone = theMdlFileData.theBones[i];
+                    if ((aBone.theSurfacePropName ?? "") != (theMdlFileData.theSurfacePropName ?? ""))
+                    {
+                        if (!emptyLineIsAlreadyWritten)
+                        {
+                            line = "";
+                            theOutputFileStreamWriter.WriteLine(line);
+                            emptyLineIsAlreadyWritten = true;
+                        }
+
+                        if (Program.TheApp.Settings.DecompileQcUseMixedCaseForKeywordsIsChecked)
+                        {
+                            line = "$JointSurfaceProp ";
+                        }
+                        else
+                        {
+                            line = "$jointsurfaceprop ";
+                        }
+
+                        line += "\"";
+                        line += aBone.theName;
+                        line += "\"";
+                        line += " ";
+                        line += "\"";
+                        line += aBone.theSurfacePropName;
+                        line += "\"";
+                        theOutputFileStreamWriter.WriteLine(line);
+                    }
+                }
+            }
+        }
+
+        public void WriteContentsCommand()
+        {
+            if (theMdlFileData.contents > 0)
+            {
+                string line = "";
+                line = "";
+                theOutputFileStreamWriter.WriteLine(line);
+
+                // $contents "monster" "grate"
+                if (Program.TheApp.Settings.DecompileQcUseMixedCaseForKeywordsIsChecked)
+                {
+                    line = "$Contents";
+                }
+                else
+                {
+                    line = "$contents";
+                }
+
+                line += GetContentsFlags(theMdlFileData.contents);
+                theOutputFileStreamWriter.WriteLine(line);
+            }
+        }
+
+        public void WriteJointContentsCommand()
+        {
+            string line = "";
+
+            // $jointcontents "<bone_name>" "<content_type_1>" "<content_type_2>" "<content_type_3>"
+            if (theMdlFileData.theBones is object)
+            {
+                SourceMdlBone aBone;
+                bool emptyLineIsAlreadyWritten;
+                emptyLineIsAlreadyWritten = false;
+                for (int i = 0, loopTo = theMdlFileData.theBones.Count - 1; i <= loopTo; i++)
+                {
+                    aBone = theMdlFileData.theBones[i];
+                    if (aBone.contents != theMdlFileData.contents)
+                    {
+                        if (!emptyLineIsAlreadyWritten)
+                        {
+                            line = "";
+                            theOutputFileStreamWriter.WriteLine(line);
+                            emptyLineIsAlreadyWritten = true;
+                        }
+
+                        if (Program.TheApp.Settings.DecompileQcUseMixedCaseForKeywordsIsChecked)
+                        {
+                            line = "$JointContents ";
+                        }
+                        else
+                        {
+                            line = "$jointcontents ";
+                        }
+
+                        line += "\"";
+                        line += aBone.theName;
+                        line += "\"";
+                        line += GetContentsFlags(aBone.contents);
+                        theOutputFileStreamWriter.WriteLine(line);
+                    }
+                }
+            }
+        }
+
+        // //-----------------------------------------------------------------------------
+        // // Parse contents flags
+        // //-----------------------------------------------------------------------------
+        // static void ParseContents( int *pAddFlags, int *pRemoveFlags )
+        // {
+        // *pAddFlags = 0;
+        // *pRemoveFlags = 0;
+        // do 
+        // {
+        // GetToken (false);
+
+        // if ( !stricmp( token, "grate" ) )
+        // {
+        // *pAddFlags |= CONTENTS_GRATE;
+        // *pRemoveFlags |= CONTENTS_SOLID;
+        // }
+        // else if ( !stricmp( token, "ladder" ) )
+        // {
+        // *pAddFlags |= CONTENTS_LADDER;
+        // }
+        // else if ( !stricmp( token, "solid" ) )
+        // {
+        // *pAddFlags |= CONTENTS_SOLID;
+        // }
+        // else if ( !stricmp( token, "monster" ) )
+        // {
+        // *pAddFlags |= CONTENTS_MONSTER;
+        // }
+        // else if ( !stricmp( token, "notsolid" ) )
+        // {
+        // *pRemoveFlags |= CONTENTS_SOLID;
+        // }
+        // } while (TokenAvailable());
+        // }
+        private string GetContentsFlags(int contentsFlags)
+        {
+            string flagNames = "";
+            if ((contentsFlags & SourceMdlBone.CONTENTS_GRATE) > 0)
+            {
+                flagNames += " ";
+                flagNames += "\"";
+                flagNames += "grate";
+                flagNames += "\"";
+            }
+
+            if ((contentsFlags & SourceMdlBone.CONTENTS_MONSTER) > 0)
+            {
+                flagNames += " ";
+                flagNames += "\"";
+                flagNames += "monster";
+                flagNames += "\"";
+            }
+
+            if ((contentsFlags & SourceMdlBone.CONTENTS_LADDER) > 0)
+            {
+                flagNames += " ";
+                flagNames += "\"";
+                flagNames += "ladder";
+                flagNames += "\"";
+            }
+
+            if ((contentsFlags & SourceMdlBone.CONTENTS_SOLID) > 0)
+            {
+                flagNames += " ";
+                flagNames += "\"";
+                flagNames += "solid";
+                flagNames += "\"";
+            }
+
+            if (string.IsNullOrEmpty(flagNames))
+            {
+                flagNames += " ";
+                flagNames += "\"";
+                flagNames += "notsolid";
+                flagNames += "\"";
+            }
+
+            return flagNames;
+        }
+
+        public void WriteEyePositionCommand()
+        {
+            string line = "";
+            double offsetX;
+            double offsetY;
+            double offsetZ;
+            offsetX = Math.Round(theMdlFileData.eyePositionY, 3);
+            offsetY = -Math.Round(theMdlFileData.eyePositionX, 3);
+            offsetZ = Math.Round(theMdlFileData.eyePositionZ, 3);
+            if (offsetX == 0d && offsetY == 0d && offsetZ == 0d)
+            {
+                return;
+            }
+
+            line = "";
+            theOutputFileStreamWriter.WriteLine(line);
+
+            // $eyeposition -0.000 0.000 70.000
+            // NOTE: These are stored in different order in MDL file.
+            // FROM: utils\studiomdl\studiomdl.cpp Cmd_Eyeposition()
+            // eyeposition[1] = verify_atof (token);
+            // eyeposition[0] = -verify_atof (token);
+            // eyeposition[2] = verify_atof (token);
+            if (Program.TheApp.Settings.DecompileQcUseMixedCaseForKeywordsIsChecked)
+            {
+                line = "$EyePosition ";
+            }
+            else
+            {
+                line = "$eyeposition ";
+            }
+
+            line += offsetX.ToString("0.######", Program.TheApp.InternalNumberFormat);
+            line += " ";
+            line += offsetY.ToString("0.######", Program.TheApp.InternalNumberFormat);
+            line += " ";
+            line += offsetZ.ToString("0.######", Program.TheApp.InternalNumberFormat);
+            theOutputFileStreamWriter.WriteLine(line);
+        }
+
+        public void WriteMaxEyeDeflectionCommand()
+        {
+            if (theMdlFileData.maxEyeDeflection < -0.0000001d || theMdlFileData.maxEyeDeflection > 0.0000001d)
+            {
+                string line = "";
+                double deflection;
+                deflection = Math.Acos(theMdlFileData.maxEyeDeflection);
+                deflection = MathModule.RadiansToDegrees(deflection);
+                deflection = Math.Round(deflection, 3);
+                line = "";
+                theOutputFileStreamWriter.WriteLine(line);
+                if (Program.TheApp.Settings.DecompileQcUseMixedCaseForKeywordsIsChecked)
+                {
+                    line = "$MaxEyeDeflection ";
+                }
+                else
+                {
+                    line = "$maxeyedeflection ";
+                }
+
+                line += deflection.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                theOutputFileStreamWriter.WriteLine(line);
+            }
+        }
+
+        public void WriteIllumPositionCommand()
+        {
+            string line;
+            double offsetX;
+            double offsetY;
+            double offsetZ;
+            offsetX = Math.Round(theMdlFileData.illuminationPosition.y, 3);
+            offsetY = -Math.Round(theMdlFileData.illuminationPosition.x, 3);
+            offsetZ = Math.Round(theMdlFileData.illuminationPosition.z, 3);
+            line = "";
+            theOutputFileStreamWriter.WriteLine(line);
+            line = "";
+            if (Program.TheApp.Settings.DecompileQcUseMixedCaseForKeywordsIsChecked)
+            {
+                line += "$IllumPosition ";
+            }
+            else
+            {
+                line += "$illumposition ";
+            }
+
+            line += offsetX.ToString("0.######", Program.TheApp.InternalNumberFormat);
+            line += " ";
+            line += offsetY.ToString("0.######", Program.TheApp.InternalNumberFormat);
+            line += " ";
+            line += offsetZ.ToString("0.######", Program.TheApp.InternalNumberFormat);
+            theOutputFileStreamWriter.WriteLine(line);
+        }
+
+        public void WriteGroupAnimation()
+        {
+            WriteAnimBlockSizeCommand();
+            WriteBoneSaveFrameCommand();
+            WriteSectionFramesCommand();
+            WritePoseParameterCommand();
+            WriteIkChainCommand();
+            WriteIkAutoPlayLockCommand();
+            FillInWeightLists();
+            // NOTE: Must write $WeightList lines before animations or sequences that use them.
+            WriteWeightListCommand();
+            // NOTE: Must write $animation lines before $sequence lines that use them.
+            try
+            {
+                WriteAnimationOrDeclareAnimationCommand();
+            }
+            catch (Exception ex)
+            {
+                int debug = 4242;
+            }
+
+            try
+            {
+                WriteSequenceOrDeclareSequenceCommand();
+            }
+            catch (Exception ex)
+            {
+                int debug = 4242;
+            }
+
+            WriteIncludeModelCommand();
+        }
+
+        private void WriteAnimBlockSizeCommand()
+        {
+            string line = "";
+
+            // $animblocksize 32 nostall highres
+            if (theMdlFileData.animBlockCount > 0)
+            {
+                theOutputFileStreamWriter.WriteLine();
+                line = "// The 32 below is a guess until further is known about the format.";
+                theOutputFileStreamWriter.WriteLine(line);
+                if (Program.TheApp.Settings.DecompileQcUseMixedCaseForKeywordsIsChecked)
+                {
+                    line = "$AnimBlockSize";
+                }
+                else
+                {
+                    line = "$animblocksize";
+                }
+
+                line += " ";
+                line += "32";
+                // line += " "
+                // line += "nostall"
+                // line += " "
+                // line += "highres"
+                theOutputFileStreamWriter.WriteLine(line);
+            }
+        }
+
+        private void WriteSectionFramesCommand()
+        {
+            string line = "";
+
+            // $sectionframes
+            if (theMdlFileData.theSectionFrameCount > 0)
+            {
+                theOutputFileStreamWriter.WriteLine();
+                if (Program.TheApp.Settings.DecompileQcUseMixedCaseForKeywordsIsChecked)
+                {
+                    line = "$SectionFrames";
+                }
+                else
+                {
+                    line = "$sectionframes";
+                }
+
+                line += " ";
+                line += theMdlFileData.theSectionFrameCount.ToString(Program.TheApp.InternalNumberFormat);
+                line += " ";
+                line += theMdlFileData.theSectionFrameMinFrameCount.ToString(Program.TheApp.InternalNumberFormat);
+                theOutputFileStreamWriter.WriteLine(line);
+            }
+        }
+
+        private void FillInWeightLists()
+        {
+            if (theMdlFileData.theSequenceDescs is object)
+            {
+                SourceMdlSequenceDesc aSeqDesc;
+                SourceMdlWeightList aWeightList;
+                int aWeightListIndex;
+                for (int i = 0, loopTo = theMdlFileData.theSequenceDescs.Count - 1; i <= loopTo; i++)
+                {
+                    aSeqDesc = theMdlFileData.theSequenceDescs[i];
+                    try
+                    {
+                        if (aSeqDesc.theBoneWeights is object && aSeqDesc.theBoneWeights.Count > 0 && !aSeqDesc.theBoneWeightsAreDefault)
+                        {
+                            var loopTo1 = theMdlFileData.theWeightLists.Count - 1;
+                            for (aWeightListIndex = 0; aWeightListIndex <= loopTo1; aWeightListIndex++)
+                            {
+                                aWeightList = theMdlFileData.theWeightLists[aWeightListIndex];
+                                if (GenericsModule.ListsAreEqual(aSeqDesc.theBoneWeights, aWeightList.theWeights))
+                                {
+                                    break;
+                                }
+                            }
+
+                            if (aWeightListIndex < theMdlFileData.theWeightLists.Count)
+                            {
+                                aSeqDesc.theWeightListIndex = aWeightListIndex;
+                            }
+                            else
+                            {
+                                aWeightList = new SourceMdlWeightList();
+
+                                // NOTE: Name is not stored, so use something reasonable.
+                                aWeightList.theName = "weights_" + aSeqDesc.theName;
+                                foreach (double value in aSeqDesc.theBoneWeights)
+                                    aWeightList.theWeights.Add(value);
+                                theMdlFileData.theWeightLists.Add(aWeightList);
+                                aSeqDesc.theWeightListIndex = theMdlFileData.theWeightLists.Count - 1;
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        int debug = 4242;
+                    }
+                }
+            }
+        }
+
+        private void WriteWeightListCommand()
+        {
+            string line = "";
+            string commentTag = "";
+
+            // 'NOTE: Comment-out for now, because some models will not recompile with them.
+            // commentTag = "// "
+
+            // $weightlist top_bottom {
+            // "Bone_1" 0
+            // "Bone_2" 0.25
+            // "Bone_3" 0.5
+            // "Bone_4" 0.75
+            // "Bone_5" 1
+            // }
+            // If Me.theSourceEngineModel.MdlFileHeader.theSequenceDescs IsNot Nothing Then
+            // Me.theOutputFileStreamWriter.WriteLine()
+
+            // For i As Integer = 0 To Me.theSourceEngineModel.MdlFileHeader.theSequenceDescs.Count - 1
+            // Dim aSeqDesc As SourceMdlSequenceDesc
+            // aSeqDesc = Me.theSourceEngineModel.MdlFileHeader.theSequenceDescs(i)
+
+            // If aSeqDesc.theBoneWeights IsNot Nothing AndAlso aSeqDesc.theBoneWeights.Count > 0 AndAlso Not aSeqDesc.theBoneWeightsAreDefault Then
+            // line = "$WeightList "
+            // 'NOTE: Name is not stored, so use something reasonable.
+            // line += """"
+            // line += "weights_"
+            // line += aSeqDesc.theName
+            // line += """"
+            // 'NOTE: The opening brace must be on same line as the command.
+            // line += " {"
+            // Me.theOutputFileStreamWriter.WriteLine(commentTag + line)
+
+            // For boneWeightIndex As Integer = 0 To aSeqDesc.theBoneWeights.Count - 1
+            // line = vbTab
+            // line += " """
+            // line += Me.theSourceEngineModel.MdlFileHeader.theBones(boneWeightIndex).theName
+            // line += """ "
+            // line += aSeqDesc.theBoneWeights(boneWeightIndex).ToString("0.######", TheApp.InternalNumberFormat)
+            // Me.theOutputFileStreamWriter.WriteLine(commentTag + line)
+            // Next
+
+            // line = "}"
+            // Me.theOutputFileStreamWriter.WriteLine(commentTag + line)
+            // End If
+            // Next
+            // End If
+            foreach (SourceMdlWeightList aWeightList in theMdlFileData.theWeightLists)
+            {
+                theOutputFileStreamWriter.WriteLine();
+                if (Program.TheApp.Settings.DecompileQcUseMixedCaseForKeywordsIsChecked)
+                {
+                    line = "$WeightList ";
+                }
+                else
+                {
+                    line = "$weightlist ";
+                }
+
+                line += "\"";
+                line += aWeightList.theName;
+                line += "\"";
+                // NOTE: The opening brace must be on same line as the command.
+                line += " {";
+                theOutputFileStreamWriter.WriteLine(commentTag + line);
+                for (int boneWeightIndex = 0, loopTo = aWeightList.theWeights.Count - 1; boneWeightIndex <= loopTo; boneWeightIndex++)
+                {
+                    line = Constants.vbTab;
+                    line += " \"";
+                    line += theMdlFileData.theBones[boneWeightIndex].theName;
+                    line += "\" ";
+                    line += aWeightList.theWeights[boneWeightIndex].ToString("0.######", Program.TheApp.InternalNumberFormat);
+                    theOutputFileStreamWriter.WriteLine(commentTag + line);
+                }
+
+                line = "}";
+                theOutputFileStreamWriter.WriteLine(commentTag + line);
+            }
+        }
+
+        private void WriteAnimationOrDeclareAnimationCommand()
+        {
+            if (theMdlFileData.theAnimationDescs is object)
+            {
+                for (int i = 0, loopTo = theMdlFileData.theAnimationDescs.Count - 1; i <= loopTo; i++)
+                {
+                    SourceMdlAnimationDesc52 anAnimationDesc;
+                    anAnimationDesc = theMdlFileData.theAnimationDescs[i];
+                    if (Conversions.ToString(anAnimationDesc.theName[0]) != "@")
+                    {
+                        WriteAnimationLine(anAnimationDesc);
+                    }
+                }
+            }
+        }
+
+        private void WriteAnimationLine(SourceMdlAnimationDesc52 anAnimationDesc)
+        {
+            string line = "";
+            theOutputFileStreamWriter.WriteLine();
+            if ((anAnimationDesc.flags & SourceMdlAnimationDesc.STUDIO_OVERRIDE) > 0)
+            {
+                if (Program.TheApp.Settings.DecompileQcUseMixedCaseForKeywordsIsChecked)
+                {
+                    line = "$DeclareAnimation";
+                }
+                else
+                {
+                    line = "$declareanimation";
+                }
+
+                line += " \"";
+                // TODO: Does this need to check and remove initial "@" from name?
+                line += anAnimationDesc.theName;
+                line += "\"";
+                theOutputFileStreamWriter.WriteLine(line);
+            }
+            else
+            {
+                // $animation a_reference "primary_idle.dmx" lx ly
+                // NOTE: The $Animation command must have name first and file name second and on same line as the command.
+                if (Program.TheApp.Settings.DecompileQcUseMixedCaseForKeywordsIsChecked)
+                {
+                    line = "$Animation";
+                }
+                else
+                {
+                    line = "$animation";
+                }
+
+                anAnimationDesc.theSmdRelativePathFileName = SourceFileNamesModule.CreateAnimationSmdRelativePathFileName(anAnimationDesc.theSmdRelativePathFileName, theModelName, anAnimationDesc.theName);
+                line += " \"";
+                line += anAnimationDesc.theName;
+                line += "\" \"";
+                line += anAnimationDesc.theSmdRelativePathFileName;
+                line += "\"";
+                // NOTE: Opening brace must be on same line as the command.
+                line += " {";
+                theOutputFileStreamWriter.WriteLine(line);
+                WriteAnimationOptions(null, anAnimationDesc, null);
+                line = "}";
+                theOutputFileStreamWriter.WriteLine(line);
+            }
+        }
+
+        private void WriteSequenceOrDeclareSequenceCommand()
+        {
+            // $sequence producer "producer" fps 30.00
+            // $sequence ragdoll "ragdoll" ACT_DIERAGDOLL 1 fps 30.00
+            if (theMdlFileData.theSequenceDescs is object)
+            {
+                for (int i = 0, loopTo = theMdlFileData.theSequenceDescs.Count - 1; i <= loopTo; i++)
+                {
+                    SourceMdlSequenceDesc aSequenceDesc;
+                    aSequenceDesc = theMdlFileData.theSequenceDescs[i];
+                    WriteSequenceLine(aSequenceDesc);
+                }
+            }
+        }
+
+        private void WriteSequenceLine(SourceMdlSequenceDesc aSequenceDesc)
+        {
+            string line = "";
+            theOutputFileStreamWriter.WriteLine();
+            if ((aSequenceDesc.flags & SourceMdlAnimationDesc.STUDIO_OVERRIDE) > 0)
+            {
+                if (Program.TheApp.Settings.DecompileQcUseMixedCaseForKeywordsIsChecked)
+                {
+                    line = "$DeclareSequence";
+                }
+                else
+                {
+                    line = "$declaresequence";
+                }
+
+                line += " \"";
+                line += aSequenceDesc.theName;
+                line += "\"";
+                theOutputFileStreamWriter.WriteLine(line);
+            }
+            else if (aSequenceDesc.theAnimDescIndexes is object || aSequenceDesc.theAnimDescIndexes.Count > 0)
+            {
+                if (Program.TheApp.Settings.DecompileQcUseMixedCaseForKeywordsIsChecked)
+                {
+                    line = "$Sequence ";
+                }
+                else
+                {
+                    line = "$sequence ";
+                }
+
+                line += "\"";
+                line += aSequenceDesc.theName;
+                line += "\"";
+                // NOTE: Opening brace must be on same line as the command.
+                line += " {";
+                theOutputFileStreamWriter.WriteLine(line);
+                try
+                {
+                    WriteSequenceOptions(aSequenceDesc);
+                }
+                catch (Exception ex)
+                {
+                    int debug = 4242;
+                }
+
+                line = "}";
+                theOutputFileStreamWriter.WriteLine(line);
+            }
+        }
+
+        // activity           // done
+        // activitymodifier   // v49; done
+        // addlayer           // done
+        // autoplay           // done
+        // blend              // done
+        // blendcenter        // baked-in
+        // blendcomp          // baked-in
+        // blendlayer         // done
+        // blendwidth         // done
+        // blendref           // baked-in
+        // calcblend          // baked-in
+        // delta              // done
+        // event              // done
+        // exitphase          // not used
+        // fadein             // done
+        // fadeout            // done
+        // hidden             // done
+        // iklock             // done
+        // keyvalues          // done
+        // node               // done
+        // posecycle          // v49; done
+        // post               // baked-in
+        // predelta           // done
+        // realtime           // done
+        // rtransition        // done
+        // snap               // done
+        // transition         // done
+        // worldspace         // done       
+        // ParseAnimationToken( animations[0] )
+        // Cmd_ImpliedAnimation( pseq, token )
+        private void WriteSequenceOptions(SourceMdlSequenceDesc aSequenceDesc)
+        {
+            string line = "";
+            string valueString;
+            SourceMdlAnimationDesc52 impliedAnimDesc = null;
+            SourceMdlAnimationDesc52 anAnimationDesc;
+            string name;
+            for (int j = 0, loopTo = aSequenceDesc.theAnimDescIndexes.Count - 1; j <= loopTo; j++)
+            {
+                anAnimationDesc = theMdlFileData.theAnimationDescs[aSequenceDesc.theAnimDescIndexes[j]];
+                name = anAnimationDesc.theName;
+                line = Constants.vbTab;
+                line += "\"";
+                if (Conversions.ToString(name[0]) == "@")
+                {
+                    // NOTE: There should only be one implied anim desc.
+                    impliedAnimDesc = anAnimationDesc;
+                    anAnimationDesc.theSmdRelativePathFileName = SourceFileNamesModule.CreateAnimationSmdRelativePathFileName(anAnimationDesc.theSmdRelativePathFileName, theModelName, anAnimationDesc.theName);
+                    line += anAnimationDesc.theSmdRelativePathFileName;
+                }
+                else
+                {
+                    line += name;
+                }
+
+                line += "\"";
+                theOutputFileStreamWriter.WriteLine(line);
+            }
+
+            if (!string.IsNullOrEmpty(aSequenceDesc.theActivityName))
+            {
+                line = Constants.vbTab;
+                line += "activity ";
+                line += "\"";
+                line += aSequenceDesc.theActivityName;
+                line += "\" ";
+                line += aSequenceDesc.activityWeight.ToString(Program.TheApp.InternalNumberFormat);
+                theOutputFileStreamWriter.WriteLine(line);
+            }
+
+            if (aSequenceDesc.theActivityModifiers is object)
+            {
+                foreach (SourceMdlActivityModifier activityModifier in aSequenceDesc.theActivityModifiers)
+                {
+                    line = Constants.vbTab;
+                    line += "activitymodifier ";
+                    line += activityModifier.theName;
+                    theOutputFileStreamWriter.WriteLine(line);
+                }
+            }
+
+            if ((aSequenceDesc.flags & SourceMdlAnimationDesc.STUDIO_AUTOPLAY) > 0)
+            {
+                line = Constants.vbTab;
+                line += "autoplay";
+                theOutputFileStreamWriter.WriteLine(line);
+            }
+
+            WriteSequenceBlendInfo(aSequenceDesc);
+            if (aSequenceDesc.groupSize[0] != aSequenceDesc.groupSize[1])
+            {
+                line = Constants.vbTab;
+                line += "blendwidth ";
+                line += aSequenceDesc.groupSize[0].ToString(Program.TheApp.InternalNumberFormat);
+                theOutputFileStreamWriter.WriteLine(line);
+            }
+
+            WriteSequenceDeltaInfo(aSequenceDesc);
+            if (aSequenceDesc.theEvents is object)
+            {
+                int frameIndex;
+                int frameCount;
+                frameCount = theMdlFileData.theAnimationDescs[aSequenceDesc.theAnimDescIndexes[0]].frameCount;
+                for (int j = 0, loopTo1 = aSequenceDesc.theEvents.Count - 1; j <= loopTo1; j++)
+                {
+                    if (frameCount <= 1)
+                    {
+                        frameIndex = 0;
+                    }
+                    else
+                    {
+                        frameIndex = (int)Math.Round(aSequenceDesc.theEvents[j].cycle * (frameCount - 1));
+                    }
+
+                    line = Constants.vbTab;
+                    line += "{ ";
+                    line += "event ";
+                    line += aSequenceDesc.theEvents[j].theName;
+                    line += " ";
+                    line += frameIndex.ToString(Program.TheApp.InternalNumberFormat);
+                    if (!string.IsNullOrEmpty(aSequenceDesc.theEvents[j].options.ToString()))
+                    {
+                        line += " \"";
+                        line += Conversions.ToString(aSequenceDesc.theEvents[j].options).Trim('\0');
+                        line += "\"";
+                    }
+
+                    line += " }";
+                    theOutputFileStreamWriter.WriteLine(line);
+                }
+            }
+
+            valueString = aSequenceDesc.fadeInTime.ToString("0.######", Program.TheApp.InternalNumberFormat);
+            line = Constants.vbTab;
+            line += "fadein ";
+            line += valueString;
+            theOutputFileStreamWriter.WriteLine(line);
+            valueString = aSequenceDesc.fadeOutTime.ToString("0.######", Program.TheApp.InternalNumberFormat);
+            line = Constants.vbTab;
+            line += "fadeout ";
+            line += valueString;
+            theOutputFileStreamWriter.WriteLine(line);
+            if ((aSequenceDesc.flags & SourceMdlAnimationDesc.STUDIO_HIDDEN) > 0)
+            {
+                line = Constants.vbTab;
+                line += "hidden";
+                theOutputFileStreamWriter.WriteLine(line);
+            }
+
+            // If aSeqDesc.theIkLocks IsNot Nothing AndAlso Me.theSourceEngineModel.theMdlFileHeader.theIkLocks IsNot Nothing AndAlso Me.theSourceEngineModel.theMdlFileHeader.theIkChains IsNot Nothing Then
+            if (aSequenceDesc.theIkLocks is object && theMdlFileData.theIkChains is object)
+            {
+                SourceMdlIkLock ikLock;
+                for (int ikLockIndex = 0, loopTo2 = aSequenceDesc.theIkLocks.Count - 1; ikLockIndex <= loopTo2; ikLockIndex++)
+                {
+                    // If ikLockIndex >= Me.theSourceEngineModel.theMdlFileHeader.theIkLocks.Count Then
+                    // Continue For
+                    // End If
+                    // ikLock = Me.theSourceEngineModel.theMdlFileHeader.theIkLocks(ikLockIndex)
+                    ikLock = aSequenceDesc.theIkLocks[ikLockIndex];
+
+                    // iklock <chain name> <pos lock> <angle lock>
+                    line = Constants.vbTab;
+                    line += "iklock \"";
+                    line += theMdlFileData.theIkChains[ikLock.chainIndex].theName;
+                    line += "\"";
+                    line += " ";
+                    line += ikLock.posWeight.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                    line += " ";
+                    line += ikLock.localQWeight.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                    theOutputFileStreamWriter.WriteLine(line);
+                }
+            }
+
+            WriteKeyValues(aSequenceDesc.theKeyValues, "keyvalues");
+            WriteSequenceLayerInfo(aSequenceDesc);
+            WriteSequenceNodeInfo(aSequenceDesc);
+            if ((aSequenceDesc.flags & SourceMdlAnimationDesc.STUDIO_CYCLEPOSE) > 0)
+            {
+                line = Constants.vbTab;
+                line += "posecycle ";
+                line += aSequenceDesc.cyclePoseIndex.ToString(Program.TheApp.InternalNumberFormat);
+                theOutputFileStreamWriter.WriteLine(line);
+            }
+
+            if ((aSequenceDesc.flags & SourceMdlAnimationDesc.STUDIO_REALTIME) > 0)
+            {
+                line = Constants.vbTab;
+                line += "realtime";
+                theOutputFileStreamWriter.WriteLine(line);
+            }
+
+            if ((aSequenceDesc.flags & SourceMdlAnimationDesc.STUDIO_SNAP) > 0)
+            {
+                line = Constants.vbTab;
+                line += "snap";
+                theOutputFileStreamWriter.WriteLine(line);
+            }
+
+            if ((aSequenceDesc.flags & SourceMdlAnimationDesc.STUDIO_WORLD) > 0)
+            {
+                line = Constants.vbTab;
+                line += "worldspace";
+                theOutputFileStreamWriter.WriteLine(line);
+            }
+
+            // If blah Then
+            // line = vbTab
+            // line += ""
+            // Me.theOutputFileStreamWriter.WriteLine(line)
+            // End If
+
+            SourceMdlAnimationDesc52 firstAnimDesc;
+            firstAnimDesc = theMdlFileData.theAnimationDescs[aSequenceDesc.theAnimDescIndexes[0]];
+            WriteAnimationOptions(aSequenceDesc, firstAnimDesc, impliedAnimDesc);
+        }
+
+        // angles
+        // autoik
+        // blockname
+        // cmdlist
+        // fps                // done
+        // frame              // baked-in and decompiles as separate anim smd files
+        // fudgeloop
+        // if
+        // loop               // done
+        // motionrollback
+        // noanimblock
+        // noanimblockstall
+        // noautoik
+        // origin
+        // post               // baked-in 
+        // rotate
+        // scale
+        // snap               // ($sequence version handled elsewhere)
+        // startloop
+        // ParseCmdlistToken( panim->numcmds, panim->cmds )
+        // TODO: All these options (LX, LY, etc.) seem to be baked-in, but might need to be calculated for anims that have movement.
+        // lookupControl( token )       
+        private void WriteAnimationOptions(SourceMdlSequenceDesc aSequenceDesc, SourceMdlAnimationDesc52 anAnimationDesc, SourceMdlAnimationDesc52 impliedAnimDesc)
+        {
+            string line = "";
+            line = Constants.vbTab;
+            line += "fps ";
+            line += anAnimationDesc.fps.ToString("0.######", Program.TheApp.InternalNumberFormat);
+            theOutputFileStreamWriter.WriteLine(line);
+            if (aSequenceDesc is null)
+            {
+                if ((anAnimationDesc.flags & SourceMdlAnimationDesc.STUDIO_LOOPING) > 0)
+                {
+                    line = Constants.vbTab;
+                    line += "loop";
+                    theOutputFileStreamWriter.WriteLine(line);
+                }
+            }
+            else if ((aSequenceDesc.flags & SourceMdlAnimationDesc.STUDIO_LOOPING) > 0)
+            {
+                line = Constants.vbTab;
+                line += "loop";
+                theOutputFileStreamWriter.WriteLine(line);
+            }
+
+            WriteCmdListOptions(aSequenceDesc, anAnimationDesc, impliedAnimDesc);
+        }
+
+        // align
+        // alignbone
+        // alignboneto
+        // alignto
+        // compress
+        // counterrotate
+        // counterrotateto
+        // derivative
+        // fixuploop          // baked-in
+        // ikfixup
+        // ikrule
+        // lineardelta
+        // localhierarchy     // done
+        // match
+        // matchblend
+        // noanimation        // done
+        // numframes
+        // presubtract
+        // rotateto
+        // splinedelta
+        // subtract
+        // walkalign
+        // walkalignto
+        // walkframe
+        // weightlist         // done
+        // worldspaceblend       //
+        // worldspaceblendloop   // 
+        private void WriteCmdListOptions(SourceMdlSequenceDesc aSequenceDesc, SourceMdlAnimationDesc52 anAnimationDesc, SourceMdlAnimationDesc52 impliedAnimDesc)
+        {
+            string line = "";
+            if (anAnimationDesc.theIkRules is object)
+            {
+                foreach (SourceMdlIkRule anIkRule in anAnimationDesc.theIkRules)
+                {
+                    line = Constants.vbTab;
+                    line += "ikrule";
+                    line += " \"";
+                    line += theMdlFileData.theIkChains[anIkRule.chain].theName;
+                    line += "\"";
+                    if (anIkRule.type == SourceMdlIkRule.IK_SELF)
+                    {
+                        line += " ";
+                        line += "touch";
+                        line += " \"";
+                        if (anIkRule.bone >= 0)
+                        {
+                            line += theMdlFileData.theBones[anIkRule.bone].theName;
+                        }
+
+                        line += "\"";
+                    }
+                    // ElseIf anIkRule.type = SourceMdlIkRule.IK_WORLD Then
+                    // line += " "
+                    // line += "world"
+                    else if (anIkRule.type == SourceMdlIkRule.IK_GROUND)
+                    {
+                        line += " ";
+                        line += "footstep";
+                    }
+                    else if (anIkRule.type == SourceMdlIkRule.IK_RELEASE)
+                    {
+                        line += " ";
+                        line += "release";
+                    }
+                    else if (anIkRule.type == SourceMdlIkRule.IK_ATTACHMENT)
+                    {
+                        line += " ";
+                        line += "attachment";
+                        line += " \"";
+                        line += anIkRule.theAttachmentName;
+                        line += "\"";
+                    }
+                    else if (anIkRule.type == SourceMdlIkRule.IK_UNLATCH)
+                    {
+                        line += " ";
+                        line += "unlatch";
+                    }
+
+                    theOutputFileStreamWriter.WriteLine(line);
+                }
+            }
+
+            // $sequence taunt01 "taunt01.dmx" fps 30 localhierarchy "weapon_bone" "bip_hand_L" range 0 5 80 90 {
+            // if (srcanim->numframes > 1.0)
+            // {
+            // pHierarchy->start	= srcanim->localhierarchy[j].start / (srcanim->numframes - 1.0f);
+            // pHierarchy->peak	= srcanim->localhierarchy[j].peak / (srcanim->numframes - 1.0f);
+            // pHierarchy->tail	= srcanim->localhierarchy[j].tail / (srcanim->numframes - 1.0f);
+            // pHierarchy->end		= srcanim->localhierarchy[j].end / (srcanim->numframes - 1.0f);
+            // }
+            // Else
+            // {
+            // pHierarchy->start	= 0.0f;
+            // pHierarchy->peak	= 0.0f;
+            // pHierarchy->tail	= 1.0f;
+            // pHierarchy->end		= 1.0f;
+            // }
+            // NOTE: Reverse calculation of above: qc = mdl * (srcanim->numframes - 1.0f)
+            if (impliedAnimDesc is null)
+            {
+                WriteCmdListLocalHierarchyOption(anAnimationDesc);
+            }
+            else
+            {
+                WriteCmdListLocalHierarchyOption(impliedAnimDesc);
+            }
+
+            if ((anAnimationDesc.flags & SourceMdlAnimationDesc.STUDIO_ALLZEROS) > 0)
+            {
+                line = Constants.vbTab;
+                line += "noanimation";
+                theOutputFileStreamWriter.WriteLine(line);
+            }
+
+            // 'TODO: This seems valid according to source code, but it checks same flag (STUDIO_DELTA) as "delta" option.
+            // '      Unsure how to determine which option is intended or if both are intended.
+            // If (anAnimationDesc.flags And SourceMdlAnimationDesc.STUDIO_DELTA) > 0 Then
+            // line = vbTab
+            // If Me.theMdlFileData.theFirstAnimationDesc IsNot Nothing Then
+            // line += "// This subtract line is a guess of the animation name and frame index. There is no way to determine which $animation and which frame were used, so Crowbar uses the name of the first $animation. Change as needed."
+            // Else
+            // line += "// This subtract line is a guess of the animation name and frame index. There is no way to determine which $animation or $sequence and which frame were used, so Crowbar uses the name of the first $sequence. Change as needed."
+            // End If
+            // Me.theOutputFileStreamWriter.WriteLine(line)
+
+            // line = vbTab
+            // 'line += "// "
+            // line += "subtract"
+            // line += " """
+            // 'TODO: Change to writing anim_name.
+            // ' Doesn't seem to be direct way to get this name.
+            // ' For now, do what MDL Decompiler seems to do; use the first animation name.
+            // 'line += "[anim_name]"
+            // 'line += Me.theFirstAnimationDescName
+            // If Me.theMdlFileData.theFirstAnimationDesc IsNot Nothing Then
+            // line += Me.theMdlFileData.theFirstAnimationDesc.theName
+            // Else
+            // line += Me.theMdlFileData.theSequenceDescs(0).theName
+            // End If
+            // line += """ "
+            // 'TODO: Change to writing frameIndex.
+            // ' Doesn't seem to be direct way to get this value.
+            // ' For now, do what MDL Decompiler seems to do; use zero for the frameIndex.
+            // 'line += "[frameIndex]"
+            // line += "0"
+            // Me.theOutputFileStreamWriter.WriteLine(line)
+            // End If
+
+            // TODO: Can probably reduce the info written in v0.24.
+            // weightlist "top_bottom"
+            SourceMdlSequenceDesc aSeqDesc = null;
+            if (aSequenceDesc is null)
+            {
+                if (anAnimationDesc.theAnimIsLinkedToSequence)
+                {
+                    // NOTE: Just get first one, because all should have same bone weights.
+                    aSeqDesc = anAnimationDesc.theLinkedSequences[0];
+                }
+            }
+            else
+            {
+                aSeqDesc = aSequenceDesc;
+            }
+            // If aSeqDesc IsNot Nothing AndAlso aSeqDesc.theBoneWeights IsNot Nothing AndAlso aSeqDesc.theBoneWeights.Count > 0 AndAlso Not aSeqDesc.theBoneWeightsAreDefault Then
+            // Me.WriteSequenceWeightListLine(aSeqDesc)
+            // End If
+            if (aSeqDesc is object && aSeqDesc.theWeightListIndex > -1)
+            {
+                WriteSequenceWeightListLine(aSeqDesc);
+            }
+        }
+
+        private void WriteSequenceWeightListLine(SourceMdlSequenceDesc aSeqDesc)
+        {
+            string line = "";
+            line = Constants.vbTab;
+            line += "weightlist ";
+            // NOTE: Name is not stored, so use something reasonable. Needs to be the same as used in $weightlist.
+            line += "\"";
+            // line += "weights_"
+            // line += aSeqDesc.theName
+            line += theMdlFileData.theWeightLists[aSeqDesc.theWeightListIndex].theName;
+            line += "\"";
+            theOutputFileStreamWriter.WriteLine(line);
+        }
+
+        private void WriteSequenceBlendInfo(SourceMdlSequenceDesc aSeqDesc)
+        {
+            string line = "";
+            for (int i = 0; i <= 1; i++)
+            {
+                if (aSeqDesc.paramIndex[i] != -1)
+                {
+                    line = Constants.vbTab;
+                    line += "blend ";
+                    line += "\"";
+                    line += theMdlFileData.thePoseParamDescs[aSeqDesc.paramIndex[i]].theName;
+                    line += "\"";
+                    line += " ";
+                    line += aSeqDesc.paramStart[i].ToString("0.######", Program.TheApp.InternalNumberFormat);
+                    line += " ";
+                    line += aSeqDesc.paramEnd[i].ToString("0.######", Program.TheApp.InternalNumberFormat);
+                    theOutputFileStreamWriter.WriteLine(line);
+                }
+            }
+        }
+
+        private void WriteSequenceDeltaInfo(SourceMdlSequenceDesc aSeqDesc)
+        {
+            string line = "";
+            if ((aSeqDesc.flags & SourceMdlAnimationDesc.STUDIO_DELTA) > 0)
+            {
+                if ((aSeqDesc.flags & SourceMdlAnimationDesc.STUDIO_POST) > 0)
+                {
+                    line = Constants.vbTab;
+                    // line += "// "
+                    line += "delta";
+                    theOutputFileStreamWriter.WriteLine(line);
+                }
+                else
+                {
+                    line = Constants.vbTab;
+                    line += "predelta";
+                    theOutputFileStreamWriter.WriteLine(line);
+                }
+            }
+        }
+
+        private void WriteSequenceLayerInfo(SourceMdlSequenceDesc aSeqDesc)
+        {
+            if (aSeqDesc.autoLayerCount > 0)
+            {
+                string line = "";
+                SourceMdlAutoLayer layer;
+                string otherSequenceName;
+                for (int j = 0, loopTo = aSeqDesc.theAutoLayers.Count - 1; j <= loopTo; j++)
+                {
+                    layer = aSeqDesc.theAutoLayers[j];
+                    otherSequenceName = theMdlFileData.theSequenceDescs[layer.sequenceIndex].theName;
+                    if (layer.flags == 0)
+                    {
+                        // addlayer <string|other $sequence name>
+                        line = Constants.vbTab;
+                        // line += "// "
+                        line += "addlayer ";
+                        line += "\"";
+                        line += otherSequenceName;
+                        line += "\"";
+                        theOutputFileStreamWriter.WriteLine(line);
+                    }
+                    else
+                    {
+                        // blendlayer <string|other $sequence name> <int|startframe> <int|peakframe> <int|tailframe> <int|endframe> [spline] [xfade]
+                        line = Constants.vbTab;
+                        line += "blendlayer ";
+                        line += "\"";
+                        line += otherSequenceName;
+                        line += "\"";
+                        line += " ";
+                        line += layer.influenceStart.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                        line += " ";
+                        line += layer.influencePeak.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                        line += " ";
+                        line += layer.influenceTail.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                        line += " ";
+                        line += layer.influenceEnd.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                        if ((layer.flags & SourceMdlAutoLayer.STUDIO_AL_XFADE) > 0)
+                        {
+                            line += " xfade";
+                        }
+
+                        if ((layer.flags & SourceMdlAutoLayer.STUDIO_AL_SPLINE) > 0)
+                        {
+                            line += " spline";
+                        }
+
+                        if ((layer.flags & SourceMdlAutoLayer.STUDIO_AL_NOBLEND) > 0)
+                        {
+                            line += " noblend";
+                        }
+
+                        if ((layer.flags & SourceMdlAutoLayer.STUDIO_AL_POSE) > 0)
+                        {
+                            if (theMdlFileData.thePoseParamDescs is object && theMdlFileData.thePoseParamDescs.Count > layer.poseIndex)
+                            {
+                                line += " poseparameter";
+                                line += " ";
+                                line += theMdlFileData.thePoseParamDescs[layer.poseIndex].theName;
+                            }
+                        }
+
+                        if ((layer.flags & SourceMdlAutoLayer.STUDIO_AL_LOCAL) > 0)
+                        {
+                            line += " local";
+                        }
+
+                        theOutputFileStreamWriter.WriteLine(line);
+                    }
+                }
+            }
+        }
+
+        private void WriteSequenceNodeInfo(SourceMdlSequenceDesc aSeqDesc)
+        {
+            string line = "";
+            if (aSeqDesc.localEntryNodeIndex > 0)
+            {
+                if (aSeqDesc.localEntryNodeIndex == aSeqDesc.localExitNodeIndex)
+                {
+                    // node (name)
+                    line = Constants.vbTab;
+                    line += "node";
+                    line += " \"";
+                    // NOTE: Use the "-1" at end because the indexing is one-based in the mdl file.
+                    line += theMdlFileData.theLocalNodeNames[aSeqDesc.localEntryNodeIndex - 1];
+                    line += "\"";
+                    theOutputFileStreamWriter.WriteLine(line);
+                }
+                else if ((aSeqDesc.nodeFlags & 1) == 0)
+                {
+                    // transition (from) (to) 
+                    line = Constants.vbTab;
+                    line += "transition";
+                    line += " \"";
+                    // NOTE: Use the "-1" at end because the indexing is one-based in the mdl file.
+                    line += theMdlFileData.theLocalNodeNames[aSeqDesc.localEntryNodeIndex - 1];
+                    line += "\" \"";
+                    // NOTE: Use the "-1" at end because the indexing is one-based in the mdl file.
+                    line += theMdlFileData.theLocalNodeNames[aSeqDesc.localExitNodeIndex - 1];
+                    line += "\"";
+                    theOutputFileStreamWriter.WriteLine(line);
+                }
+                else
+                {
+                    // rtransition (name1) (name2) 
+                    line = Constants.vbTab;
+                    line += "rtransition";
+                    line += " \"";
+                    // NOTE: Use the "-1" at end because the indexing is one-based in the mdl file.
+                    line += theMdlFileData.theLocalNodeNames[aSeqDesc.localEntryNodeIndex - 1];
+                    line += "\" \"";
+                    // NOTE: Use the "-1" at end because the indexing is one-based in the mdl file.
+                    line += theMdlFileData.theLocalNodeNames[aSeqDesc.localExitNodeIndex - 1];
+                    line += "\"";
+                    theOutputFileStreamWriter.WriteLine(line);
+                }
+            }
+        }
+
+        private void WriteCmdListLocalHierarchyOption(SourceMdlAnimationDesc52 anAnimationDesc)
+        {
+            string line = "";
+            if (anAnimationDesc.theLocalHierarchies is object)
+            {
+                for (int hierarchyIndex = 0, loopTo = anAnimationDesc.theLocalHierarchies.Count - 1; hierarchyIndex <= loopTo; hierarchyIndex++)
+                {
+                    SourceMdlLocalHierarchy aLocalHierarchy;
+                    int frameCount;
+                    double startInfluence;
+                    double peakInfluence;
+                    double tailInfluence;
+                    double endInfluence;
+                    aLocalHierarchy = anAnimationDesc.theLocalHierarchies[0];
+                    frameCount = anAnimationDesc.frameCount;
+                    startInfluence = aLocalHierarchy.startInfluence * (frameCount - 1);
+                    peakInfluence = aLocalHierarchy.peakInfluence * (frameCount - 1);
+                    tailInfluence = aLocalHierarchy.tailInfluence * (frameCount - 1);
+                    endInfluence = aLocalHierarchy.endInfluence * (frameCount - 1);
+                    line = Constants.vbTab;
+                    line += "localhierarchy";
+                    line += " \"";
+                    line += theMdlFileData.theBones[aLocalHierarchy.boneIndex].theName;
+                    line += "\"";
+                    line += " \"";
+                    if (aLocalHierarchy.boneNewParentIndex >= 0 && aLocalHierarchy.boneNewParentIndex < theMdlFileData.theBones.Count)
+                    {
+                        line += theMdlFileData.theBones[aLocalHierarchy.boneNewParentIndex].theName;
+                    }
+
+                    line += "\"";
+                    line += " range ";
+                    line += startInfluence.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                    line += " ";
+                    line += peakInfluence.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                    line += " ";
+                    line += tailInfluence.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                    line += " ";
+                    line += endInfluence.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                    theOutputFileStreamWriter.WriteLine(line);
+                }
+            }
+        }
+
+        private void WriteIkChainCommand()
+        {
+            string line = "";
+            double offsetX;
+            double offsetY;
+            double offsetZ;
+
+            // $ikchain rhand ValveBiped.Bip01_R_Hand knee  0.707 0.707 0.000
+            // $ikchain lhand ValveBiped.Bip01_L_Hand knee  0.707 0.707 0.000
+            // $ikchain rfoot ValveBiped.Bip01_R_Foot knee  0.707 -0.707 0.000
+            // $ikchain lfoot ValveBiped.Bip01_L_Foot knee  0.707 -0.707 0.000
+            // $ikchain ikclip ValveBiped.weapon_bone_Clip knee  0.707 -0.707 0.000
+            try
+            {
+                if (theMdlFileData.theIkChains is object)
+                {
+                    line = "";
+                    theOutputFileStreamWriter.WriteLine(line);
+                    for (int i = 0, loopTo = theMdlFileData.theIkChains.Count - 1; i <= loopTo; i++)
+                    {
+                        int boneIndex = theMdlFileData.theIkChains[i].theLinks[theMdlFileData.theIkChains[i].theLinks.Count - 1].boneIndex;
+                        offsetX = Math.Round(theMdlFileData.theIkChains[i].theLinks[0].idealBendingDirection.x, 3);
+                        offsetY = Math.Round(theMdlFileData.theIkChains[i].theLinks[0].idealBendingDirection.y, 3);
+                        offsetZ = Math.Round(theMdlFileData.theIkChains[i].theLinks[0].idealBendingDirection.z, 3);
+                        if (Program.TheApp.Settings.DecompileQcUseMixedCaseForKeywordsIsChecked)
+                        {
+                            line = "$IKChain \"";
+                        }
+                        else
+                        {
+                            line = "$ikchain \"";
+                        }
+
+                        line += theMdlFileData.theIkChains[i].theName;
+                        line += "\" \"";
+                        line += theMdlFileData.theBones[boneIndex].theName;
+                        line += "\" knee ";
+                        line += offsetX.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                        line += " ";
+                        line += offsetY.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                        line += " ";
+                        line += offsetZ.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                        theOutputFileStreamWriter.WriteLine(line);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+            }
+        }
+
+        private void WriteIkAutoPlayLockCommand()
+        {
+            string line = "";
+            SourceMdlIkLock ikLock;
+
+            // $ikautoplaylock <chain name> <pos lock> <angle lock>
+            // $ikautoplaylock rfoot 1.0 0.1
+            // $ikautoplaylock lfoot 1.0 0.1
+            try
+            {
+                if (theMdlFileData.theIkLocks is object)
+                {
+                    line = "";
+                    theOutputFileStreamWriter.WriteLine(line);
+                    for (int i = 0, loopTo = theMdlFileData.theIkLocks.Count - 1; i <= loopTo; i++)
+                    {
+                        ikLock = theMdlFileData.theIkLocks[i];
+                        if (Program.TheApp.Settings.DecompileQcUseMixedCaseForKeywordsIsChecked)
+                        {
+                            line = "$IKAutoPlayLock \"";
+                        }
+                        else
+                        {
+                            line = "$ikautoplaylock \"";
+                        }
+
+                        line += theMdlFileData.theIkChains[ikLock.chainIndex].theName;
+                        line += "\"";
+                        line += " ";
+                        line += ikLock.posWeight.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                        line += " ";
+                        line += ikLock.localQWeight.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                        theOutputFileStreamWriter.WriteLine(line);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+            }
+        }
+
+        private void WriteBoneSaveFrameCommand()
+        {
+            string line = "";
+
+            // $bonesaveframe <bone name> ["position"] ["rotation"]
+            // $BoneSaveFrame "Dog_Model.Pelvis" position rotation
+            // $BoneSaveFrame "Dog_Model.Leg1_L" rotation
+            try
+            {
+                if (theMdlFileData.theBones is object)
+                {
+                    SourceMdlBone aBone;
+                    bool emptyLineIsAlreadyWritten;
+                    emptyLineIsAlreadyWritten = false;
+                    for (int i = 0, loopTo = theMdlFileData.theBones.Count - 1; i <= loopTo; i++)
+                    {
+                        aBone = theMdlFileData.theBones[i];
+                        if ((aBone.flags & SourceMdlBone.BONE_HAS_SAVEFRAME_POS) > 0 || (aBone.flags & SourceMdlBone.BONE_HAS_SAVEFRAME_ROT) > 0)
+                        {
+                            if (!emptyLineIsAlreadyWritten)
+                            {
+                                line = "";
+                                theOutputFileStreamWriter.WriteLine(line);
+                                emptyLineIsAlreadyWritten = true;
+                            }
+
+                            if (Program.TheApp.Settings.DecompileQcUseMixedCaseForKeywordsIsChecked)
+                            {
+                                line = "$BoneSaveFrame ";
+                            }
+                            else
+                            {
+                                line = "$bonesaveframe ";
+                            }
+
+                            line += "\"";
+                            line += aBone.theName;
+                            line += "\"";
+                            if ((aBone.flags & SourceMdlBone.BONE_HAS_SAVEFRAME_POS) > 0)
+                            {
+                                line += " ";
+                                line += "position";
+                            }
+
+                            if ((aBone.flags & SourceMdlBone.BONE_HAS_SAVEFRAME_ROT) > 0)
+                            {
+                                line += " ";
+                                line += "rotation";
+                            }
+
+                            theOutputFileStreamWriter.WriteLine(line);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+            }
+        }
+
+        public void WriteGroupCollision()
+        {
+            WriteCollisionModelOrCollisionJointsCommand();
+            WriteCollisionTextCommand();
+        }
+
+        public void WriteCollisionModelOrCollisionJointsCommand()
+        {
+            string line = "";
+
+            // NOTE: Data is from PHY file.
+            // $collisionmodel "tree_deciduous_01a_physbox.smd"
+            // {
+            // $mass 350.0
+            // $concave
+            // }	
+            // $collisionjoints "phymodel.smd"
+            // {
+            // $mass 100.0
+            // $inertia 10.00
+            // $damping 0.05
+            // $rotdamping 5.00
+            // $rootbone "valvebiped.bip01_pelvis"
+            // $jointrotdamping "valvebiped.bip01_pelvis" 3.00
+            // 
+            // $jointmassbias "valvebiped.bip01_spine1" 8.00
+            // $jointconstrain "valvebiped.bip01_spine1" x limit -10.00 10.00 0.00
+            // $jointconstrain "valvebiped.bip01_spine1" y limit -16.00 16.00 0.00
+            // $jointconstrain "valvebiped.bip01_spine1" z limit -20.00 30.00 0.00
+            // 
+            // $jointmassbias "valvebiped.bip01_spine2" 9.00
+            // $jointconstrain "valvebiped.bip01_spine2" x limit -10.00 10.00 0.00
+            // $jointconstrain "valvebiped.bip01_spine2" y limit -10.00 10.00 0.00
+            // $jointconstrain "valvebiped.bip01_spine2" z limit -20.00 20.00 0.00
+            // 
+            // $jointmassbias "valvebiped.bip01_r_clavicle" 4.00
+            // $jointrotdamping "valvebiped.bip01_r_clavicle" 6.00
+            // $jointconstrain "valvebiped.bip01_r_clavicle" x limit -15.00 15.00 0.00
+            // $jointconstrain "valvebiped.bip01_r_clavicle" y limit -10.00 10.00 0.00
+            // $jointconstrain "valvebiped.bip01_r_clavicle" z limit -0.00 45.00 0.00
+            // 
+            // $jointmassbias "valvebiped.bip01_l_clavicle" 4.00
+            // $jointrotdamping "valvebiped.bip01_l_clavicle" 6.00
+            // $jointconstrain "valvebiped.bip01_l_clavicle" x limit -15.00 15.00 0.00
+            // $jointconstrain "valvebiped.bip01_l_clavicle" y limit -10.00 10.00 0.00
+            // $jointconstrain "valvebiped.bip01_l_clavicle" z limit -0.00 45.00 0.00
+            // 
+            // $jointmassbias "valvebiped.bip01_l_upperarm" 5.00
+            // $jointrotdamping "valvebiped.bip01_l_upperarm" 2.00
+            // $jointconstrain "valvebiped.bip01_l_upperarm" x limit -15.00 20.00 0.00
+            // $jointconstrain "valvebiped.bip01_l_upperarm" y limit -40.00 32.00 0.00
+            // $jointconstrain "valvebiped.bip01_l_upperarm" z limit -80.00 25.00 0.00
+            // 
+            // $jointmassbias "valvebiped.bip01_l_forearm" 4.00
+            // $jointrotdamping "valvebiped.bip01_l_forearm" 4.00
+            // $jointconstrain "valvebiped.bip01_l_forearm" x limit -40.00 15.00 0.00
+            // $jointconstrain "valvebiped.bip01_l_forearm" y limit 0.00 0.00 0.00
+            // $jointconstrain "valvebiped.bip01_l_forearm" z limit -120.00 10.00 0.00
+            // 
+            // $jointrotdamping "valvebiped.bip01_l_hand" 1.00
+            // $jointconstrain "valvebiped.bip01_l_hand" x limit -25.00 25.00 0.00
+            // $jointconstrain "valvebiped.bip01_l_hand" y limit -35.00 35.00 0.00
+            // $jointconstrain "valvebiped.bip01_l_hand" z limit -50.00 50.00 0.00
+            // 
+            // $jointmassbias "valvebiped.bip01_r_upperarm" 5.00
+            // $jointrotdamping "valvebiped.bip01_r_upperarm" 2.00
+            // $jointconstrain "valvebiped.bip01_r_upperarm" x limit -15.00 20.00 0.00
+            // $jointconstrain "valvebiped.bip01_r_upperarm" y limit -40.00 32.00 0.00
+            // $jointconstrain "valvebiped.bip01_r_upperarm" z limit -80.00 25.00 0.00
+            // 
+            // $jointmassbias "valvebiped.bip01_r_forearm" 4.00
+            // $jointrotdamping "valvebiped.bip01_r_forearm" 4.00
+            // $jointconstrain "valvebiped.bip01_r_forearm" x limit -40.00 15.00 0.00
+            // $jointconstrain "valvebiped.bip01_r_forearm" y limit 0.00 0.00 0.00
+            // $jointconstrain "valvebiped.bip01_r_forearm" z limit -120.00 10.00 0.00
+            // 
+            // $jointrotdamping "valvebiped.bip01_r_hand" 1.00
+            // $jointconstrain "valvebiped.bip01_r_hand" x limit -25.00 25.00 0.00
+            // $jointconstrain "valvebiped.bip01_r_hand" y limit -35.00 35.00 0.00
+            // $jointconstrain "valvebiped.bip01_r_hand" z limit -50.00 50.00 0.00
+            // 
+            // $jointmassbias "valvebiped.bip01_r_thigh" 7.00
+            // $jointrotdamping "valvebiped.bip01_r_thigh" 7.00
+            // $jointconstrain "valvebiped.bip01_r_thigh" x limit -25.00 25.00 0.00
+            // $jointconstrain "valvebiped.bip01_r_thigh" y limit -10.00 15.00 0.00
+            // $jointconstrain "valvebiped.bip01_r_thigh" z limit -55.00 25.00 0.00
+            // 
+            // $jointmassbias "valvebiped.bip01_r_calf" 4.00
+            // $jointconstrain "valvebiped.bip01_r_calf" x limit -10.00 25.00 0.00
+            // $jointconstrain "valvebiped.bip01_r_calf" y limit -5.00 5.00 0.00
+            // $jointconstrain "valvebiped.bip01_r_calf" z limit -10.00 115.00 0.00
+            // 
+            // $jointrotdamping "valvebiped.bip01_r_foot" 2.00
+            // $jointconstrain "valvebiped.bip01_r_foot" x limit -20.00 30.00 0.00
+            // $jointconstrain "valvebiped.bip01_r_foot" y limit -30.00 20.00 0.00
+            // $jointconstrain "valvebiped.bip01_r_foot" z limit -30.00 50.00 0.00
+            // 
+            // $jointmassbias "valvebiped.bip01_l_thigh" 7.00
+            // $jointrotdamping "valvebiped.bip01_l_thigh" 7.00
+            // $jointconstrain "valvebiped.bip01_l_thigh" x limit -25.00 25.00 0.00
+            // $jointconstrain "valvebiped.bip01_l_thigh" y limit -10.00 15.00 0.00
+            // $jointconstrain "valvebiped.bip01_l_thigh" z limit -55.00 25.00 0.00
+            // 
+            // $jointmassbias "valvebiped.bip01_l_calf" 4.00
+            // $jointconstrain "valvebiped.bip01_l_calf" x limit -10.00 25.00 0.00
+            // $jointconstrain "valvebiped.bip01_l_calf" y limit -5.00 5.00 0.00
+            // $jointconstrain "valvebiped.bip01_l_calf" z limit -10.00 115.00 0.00
+            // 
+            // $jointrotdamping "valvebiped.bip01_l_foot" 2.00
+            // $jointconstrain "valvebiped.bip01_l_foot" x limit -20.00 30.00 0.00
+            // $jointconstrain "valvebiped.bip01_l_foot" y limit -30.00 20.00 0.00
+            // $jointconstrain "valvebiped.bip01_l_foot" z limit -30.00 50.00 0.00
+            // 
+            // $jointmassbias "valvebiped.bip01_head1" 4.00
+            // $jointrotdamping "valvebiped.bip01_head1" 3.00
+            // $jointconstrain "valvebiped.bip01_head1" x limit -50.00 50.00 0.00
+            // $jointconstrain "valvebiped.bip01_head1" y limit -20.00 20.00 0.00
+            // $jointconstrain "valvebiped.bip01_head1" z limit -26.00 30.00 0.00
+            // }
+            if (thePhyFileData is object && thePhyFileData.solidCount > 0)
+            {
+                theOutputFileStreamWriter.WriteLine(line);
+
+                // If Me.theSourceEngineModel.PhyFileHeader.checksum <> Me.theSourceEngineModel.MdlFileHeader.checksum Then
+                // line = "// The PHY file's checksum value is not the same as the MDL file's checksum value."
+                // Me.theOutputFileStreamWriter.WriteLine(line)
+                // End If
+
+                // NOTE: The smd file name for $collisionjoints is not stored in the mdl file, 
+                // so use the same name that MDL Decompiler uses.
+                // TODO: Find a better way to determine which to use.
+                // NOTE: "If Me.theSourceEngineModel.theMdlFileHeader.theAnimationDescs.Count < 2" 
+                // works for survivors but not for witch (which has only one sequence).
+                // If theSourceEngineModel.thePhyFileHeader.theSourcePhyPhysCollisionModels.Count < 2 Then
+                // TODO: Why not use this "if" statement? It seems reasonable that a solid matches a set of convex shapes for one bone.
+                // For example, L4D2 van has several convex shapes, but only one solid and one bone.
+                // Same for w_minigun. Both use $concave.
+                // If Me.theSourceEngineModel.thePhyFileHeader.solidCount = 1 Then
+                if (thePhyFileData.theSourcePhyIsCollisionModel)
+                {
+                    if (Program.TheApp.Settings.DecompileQcUseMixedCaseForKeywordsIsChecked)
+                    {
+                        line = "$CollisionModel ";
+                    }
+                    else
+                    {
+                        line = "$collisionmodel ";
+                    }
+                }
+                else if (Program.TheApp.Settings.DecompileQcUseMixedCaseForKeywordsIsChecked)
+                {
+                    line = "$CollisionJoints ";
+                }
+                else
+                {
+                    line = "$collisionjoints ";
+                }
+                // line += """phymodel.smd"""
+                line += "\"";
+                thePhyFileData.thePhysicsMeshSmdFileName = SourceFileNamesModule.CreatePhysicsSmdFileName(thePhyFileData.thePhysicsMeshSmdFileName, theModelName);
+                line += thePhyFileData.thePhysicsMeshSmdFileName;
+                line += "\"";
+                theOutputFileStreamWriter.WriteLine(line);
+                line = "{";
+                theOutputFileStreamWriter.WriteLine(line);
+                WriteCollisionModelOrCollisionJointsOptions();
+                line = "}";
+                theOutputFileStreamWriter.WriteLine(line);
+            }
+        }
+
+        // $animatedfriction
+        // $assumeworldspace
+        // $automass          // baked-in as mass
+        // $concave           // done
+        // $concaveperjoint
+        // $damping           // done
+        // $drag
+        // $inertia           // done
+        // $jointcollide
+        // $jointconstrain    // done
+        // $jointdamping      // done
+        // $jointinertia      // done
+        // $jointmassbias     // done
+        // $jointmerge
+        // $jointrotdamping   // done
+        // $jointskip
+        // $mass              // done
+        // $masscenter
+        // $maxconvexpieces
+        // $noselfcollisions  //done
+        // $remove2d
+        // $rollingDrag
+        // $rootbone          // done
+        // $rotdamping        // done
+        // $weldnormal
+        // $weldposition
+        private void WriteCollisionModelOrCollisionJointsOptions()
+        {
+            string line = "";
+            line = Constants.vbTab;
+            line += "$mass ";
+            line += thePhyFileData.theSourcePhyEditParamsSection.totalMass.ToString("0.######", Program.TheApp.InternalNumberFormat);
+            theOutputFileStreamWriter.WriteLine(line);
+            line = Constants.vbTab;
+            line += "$inertia ";
+            line += thePhyFileData.theSourcePhyPhysCollisionModelMostUsedValues.theInertia.ToString("0.######", Program.TheApp.InternalNumberFormat);
+            theOutputFileStreamWriter.WriteLine(line);
+            line = Constants.vbTab;
+            line += "$damping ";
+            line += thePhyFileData.theSourcePhyPhysCollisionModelMostUsedValues.theDamping.ToString("0.######", Program.TheApp.InternalNumberFormat);
+            theOutputFileStreamWriter.WriteLine(line);
+            line = Constants.vbTab;
+            line += "$rotdamping ";
+            line += thePhyFileData.theSourcePhyPhysCollisionModelMostUsedValues.theRotDamping.ToString("0.######", Program.TheApp.InternalNumberFormat);
+            theOutputFileStreamWriter.WriteLine(line);
+            if (!string.IsNullOrEmpty(thePhyFileData.theSourcePhyEditParamsSection.rootName))
+            {
+                line = Constants.vbTab;
+                line += "$rootbone \"";
+                line += thePhyFileData.theSourcePhyEditParamsSection.rootName;
+                line += "\"";
+                theOutputFileStreamWriter.WriteLine(line);
+            }
+
+            if (thePhyFileData.theSourcePhyEditParamsSection.concave == "1")
+            {
+                line = Constants.vbTab;
+                line += "$concave";
+                theOutputFileStreamWriter.WriteLine(line);
+                line = Constants.vbTab;
+                line += "$maxconvexpieces ";
+                line += thePhyFileData.theSourcePhyMaxConvexPieces.ToString();
+                theOutputFileStreamWriter.WriteLine(line);
+            }
+
+            for (int i = 0, loopTo = thePhyFileData.theSourcePhyPhysCollisionModels.Count - 1; i <= loopTo; i++)
+            {
+                SourcePhyPhysCollisionModel aSourcePhysCollisionModel;
+                aSourcePhysCollisionModel = thePhyFileData.theSourcePhyPhysCollisionModels[i];
+                line = "";
+                theOutputFileStreamWriter.WriteLine(line);
+
+                // If aSourcePhysCollisionModel.theDragCoefficientIsValid Then
+                // End If
+
+                if (aSourcePhysCollisionModel.theMassBiasIsValid)
+                {
+                    line = Constants.vbTab;
+                    line += "$jointmassbias \"";
+                    line += aSourcePhysCollisionModel.theName;
+                    line += "\" ";
+                    line += aSourcePhysCollisionModel.theMassBias.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                    theOutputFileStreamWriter.WriteLine(line);
+                }
+
+                if (aSourcePhysCollisionModel.theDamping != thePhyFileData.theSourcePhyPhysCollisionModelMostUsedValues.theDamping)
+                {
+                    line = Constants.vbTab;
+                    line += "$jointdamping \"";
+                    line += aSourcePhysCollisionModel.theName;
+                    line += "\" ";
+                    line += aSourcePhysCollisionModel.theDamping.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                    theOutputFileStreamWriter.WriteLine(line);
+                }
+
+                if (aSourcePhysCollisionModel.theInertia != thePhyFileData.theSourcePhyPhysCollisionModelMostUsedValues.theInertia)
+                {
+                    line = Constants.vbTab;
+                    line += "$jointinertia \"";
+                    line += aSourcePhysCollisionModel.theName;
+                    line += "\" ";
+                    line += aSourcePhysCollisionModel.theInertia.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                    theOutputFileStreamWriter.WriteLine(line);
+                }
+
+                if (aSourcePhysCollisionModel.theRotDamping != thePhyFileData.theSourcePhyPhysCollisionModelMostUsedValues.theRotDamping)
+                {
+                    line = Constants.vbTab;
+                    line += "$jointrotdamping \"";
+                    line += aSourcePhysCollisionModel.theName;
+                    line += "\" ";
+                    line += aSourcePhysCollisionModel.theRotDamping.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                    theOutputFileStreamWriter.WriteLine(line);
+                }
+
+                if (thePhyFileData.theSourcePhyRagdollConstraintDescs.ContainsKey(aSourcePhysCollisionModel.theIndex))
+                {
+                    SourcePhyRagdollConstraint aConstraint;
+                    aConstraint = thePhyFileData.theSourcePhyRagdollConstraintDescs[aSourcePhysCollisionModel.theIndex];
+                    line = Constants.vbTab;
+                    line += "$jointconstrain \"";
+                    line += aSourcePhysCollisionModel.theName;
+                    line += "\" x limit ";
+                    line += aConstraint.theXMin.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                    line += " ";
+                    line += aConstraint.theXMax.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                    line += " ";
+                    line += aConstraint.theXFriction.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                    theOutputFileStreamWriter.WriteLine(line);
+                    line = Constants.vbTab;
+                    line += "$jointconstrain \"";
+                    line += aSourcePhysCollisionModel.theName;
+                    line += "\" y limit ";
+                    line += aConstraint.theYMin.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                    line += " ";
+                    line += aConstraint.theYMax.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                    line += " ";
+                    line += aConstraint.theYFriction.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                    theOutputFileStreamWriter.WriteLine(line);
+                    line = Constants.vbTab;
+                    line += "$jointconstrain \"";
+                    line += aSourcePhysCollisionModel.theName;
+                    line += "\" z limit ";
+                    line += aConstraint.theZMin.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                    line += " ";
+                    line += aConstraint.theZMax.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                    line += " ";
+                    line += aConstraint.theZFriction.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                    theOutputFileStreamWriter.WriteLine(line);
+                }
+            }
+
+            if (!thePhyFileData.theSourcePhySelfCollides)
+            {
+                line = Constants.vbTab;
+                line += "$noselfcollisions";
+                theOutputFileStreamWriter.WriteLine(line);
+            }
+            else
+            {
+                foreach (SourcePhyCollisionPair aSourcePhyCollisionPair in thePhyFileData.theSourcePhyCollisionPairs)
+                {
+                    line = Constants.vbTab;
+                    line += "$jointcollide";
+                    line += " ";
+                    line += "\"";
+                    line += thePhyFileData.theSourcePhyPhysCollisionModels[aSourcePhyCollisionPair.obj0].theName;
+                    line += "\"";
+                    line += " ";
+                    line += "\"";
+                    line += thePhyFileData.theSourcePhyPhysCollisionModels[aSourcePhyCollisionPair.obj1].theName;
+                    line += "\"";
+                    theOutputFileStreamWriter.WriteLine(line);
+                }
+            }
+        }
+
+        public void WriteCollisionTextCommand()
+        {
+            string line = "";
+            try
+            {
+                if (thePhyFileData is object && thePhyFileData.theSourcePhyCollisionText is object && thePhyFileData.theSourcePhyCollisionText.Length > 0)
+                {
+                    line = "";
+                    theOutputFileStreamWriter.WriteLine(line);
+                    if (Program.TheApp.Settings.DecompileQcUseMixedCaseForKeywordsIsChecked)
+                    {
+                        line = "$CollisionText";
+                    }
+                    else
+                    {
+                        line = "$collisiontext";
+                    }
+
+                    theOutputFileStreamWriter.WriteLine(line);
+                    line = "{";
+                    theOutputFileStreamWriter.WriteLine(line);
+                    WriteTextLines(thePhyFileData.theSourcePhyCollisionText, 1);
+                    line = "}";
+                    theOutputFileStreamWriter.WriteLine(line);
+                }
+            }
+            catch (Exception ex)
+            {
+                int debug = 4242;
+            }
+        }
+
+        public void WriteGroupBone()
+        {
+            WriteDefineBoneCommand();
+            WriteBoneMergeCommand();
+            WriteProceduralBonesCommand();
+            WriteJiggleBoneCommand();
+        }
+
+        private void WriteDefineBoneCommand()
+        {
+            if (!Program.TheApp.Settings.DecompileQcIncludeDefineBoneLinesIsChecked)
+            {
+                return;
+            }
+
+            string line = "";
+
+            // NOTE: Should not be used with L4D2 survivors, because it messes up the mesh in animations.
+            // TODO: Need to figure out when to insert the lines, such as is typical for L4D2 view models.
+
+            // $definebone "ValveBiped.root" "" 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000
+            if (theMdlFileData.theBones is object)
+            {
+                SourceMdlBone aBone;
+                string aParentBoneName;
+                var aFixupPosition = new SourceVector();
+                var aFixupRotation = new SourceVector();
+                if (theMdlFileData.theBones.Count > 0)
+                {
+                    theOutputFileStreamWriter.WriteLine();
+                }
+
+                for (int i = 0, loopTo = theMdlFileData.theBones.Count - 1; i <= loopTo; i++)
+                {
+                    aBone = theMdlFileData.theBones[i];
+                    if (aBone.parentBoneIndex == -1)
+                    {
+                        aParentBoneName = "";
+                    }
+                    else
+                    {
+                        aParentBoneName = theMdlFileData.theBones[aBone.parentBoneIndex].theName;
+                    }
+
+                    if (Program.TheApp.Settings.DecompileQcUseMixedCaseForKeywordsIsChecked)
+                    {
+                        line = "$DefineBone ";
+                    }
+                    else
+                    {
+                        line = "$definebone ";
+                    }
+
+                    line += "\"";
+                    line += aBone.theName;
+                    line += "\"";
+                    line += " ";
+                    line += "\"";
+                    line += aParentBoneName;
+                    line += "\"";
+                    line += " ";
+                    line += aBone.position.x.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                    line += " ";
+                    line += aBone.position.y.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                    line += " ";
+                    line += aBone.position.z.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                    if (theMdlFileData.version == 2531)
+                    {
+                        line += " 0.000000 0.000000 0.000000";
+                    }
+                    else
+                    {
+                        line += " ";
+                        line += MathModule.RadiansToDegrees(aBone.rotation.y).ToString("0.######", Program.TheApp.InternalNumberFormat);
+                        line += " ";
+                        line += MathModule.RadiansToDegrees(aBone.rotation.z).ToString("0.######", Program.TheApp.InternalNumberFormat);
+                        line += " ";
+                        line += MathModule.RadiansToDegrees(aBone.rotation.x).ToString("0.######", Program.TheApp.InternalNumberFormat);
+                    }
+
+                    // TODO: These fixups are all zeroes for now.
+                    // They might be found in the srcbonetransform list.
+                    // Note the g_bonetable[nParent].srcRealign that seems linked to the input fixup values of $definebone.
+                    // FROM: write.cpp
+                    // mstudiosrcbonetransform_t *pSrcBoneTransform = (mstudiosrcbonetransform_t *)pData;
+                    // phdr->numsrcbonetransform = nTransformCount;
+                    // phdr->srcbonetransformindex = pData - pStart;
+                    // pData += nTransformCount * sizeof( mstudiosrcbonetransform_t );
+                    // int bt = 0;
+                    // for ( int i = 0; i < g_numbones; i++ )
+                    // {
+                    // if ( g_bonetable[i].flags & BONE_ALWAYS_PROCEDURAL )
+                    // continue;
+                    // int nParent = g_bonetable[i].parent;
+                    // if ( MatricesAreEqual( identity, g_bonetable[i].srcRealign ) &&
+                    // ( ( nParent < 0 ) || MatricesAreEqual( identity, g_bonetable[nParent].srcRealign ) ) )
+                    // continue;
+
+                    // // What's going on here?
+                    // // So, when we realign a bone, we want to do it in a way so that the child bones
+                    // // have the same bone->world transform. If we take T as the src realignment transform
+                    // // for the parent, P is the parent to world, and C is the child to parent, we expect 
+                    // // the child->world is constant after realignment:
+                    // //		CtoW = P * C = ( P * T ) * ( T^-1 * C )
+                    // // therefore Cnew = ( T^-1 * C )
+                    // If (nParent >= 0) Then
+                    // {
+                    // MatrixInvert( g_bonetable[nParent].srcRealign, pSrcBoneTransform[bt].pretransform );
+                    // }
+                    // Else
+                    // {
+                    // SetIdentityMatrix( pSrcBoneTransform[bt].pretransform );
+                    // }
+                    // MatrixCopy( g_bonetable[i].srcRealign, pSrcBoneTransform[bt].posttransform );
+                    // AddToStringTable( &pSrcBoneTransform[bt], &pSrcBoneTransform[bt].sznameindex, g_bonetable[i].name );
+                    // ++bt;
+                    // }
+
+                    line += " ";
+                    line += aFixupPosition.x.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                    line += " ";
+                    line += aFixupPosition.y.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                    line += " ";
+                    line += aFixupPosition.z.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                    line += " ";
+                    line += aFixupRotation.x.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                    line += " ";
+                    line += aFixupRotation.y.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                    line += " ";
+                    line += aFixupRotation.z.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                    theOutputFileStreamWriter.WriteLine(line);
+                }
+            }
+        }
+
+        private void WriteProceduralBonesCommand()
+        {
+            // $proceduralbones "proceduralbones.vrd"
+            if (theMdlFileData.theProceduralBonesCommandIsUsed)
+            {
+                theOutputFileStreamWriter.WriteLine();
+                string line = "";
+                if (Program.TheApp.Settings.DecompileQcUseMixedCaseForKeywordsIsChecked)
+                {
+                    line += "$ProceduralBones ";
+                }
+                else
+                {
+                    line += "$proceduralbones ";
+                }
+
+                line += "\"";
+                line += SourceFileNamesModule.GetVrdFileName(theModelName);
+                line += "\"";
+                theOutputFileStreamWriter.WriteLine(line);
+            }
+        }
+
+        private void WriteBoneMergeCommand()
+        {
+            string line = "";
+
+            // $bonemerge "ValveBiped.Bip01_R_Hand"
+            if (theMdlFileData.theBones is object)
+            {
+                SourceMdlBone aBone;
+                bool emptyLineIsAlreadyWritten;
+                emptyLineIsAlreadyWritten = false;
+                for (int i = 0, loopTo = theMdlFileData.theBones.Count - 1; i <= loopTo; i++)
+                {
+                    aBone = theMdlFileData.theBones[i];
+                    if ((aBone.flags & SourceMdlBone.BONE_USED_BY_BONE_MERGE) > 0)
+                    {
+                        if (!emptyLineIsAlreadyWritten)
+                        {
+                            theOutputFileStreamWriter.WriteLine();
+                            emptyLineIsAlreadyWritten = true;
+                        }
+
+                        if (Program.TheApp.Settings.DecompileQcUseMixedCaseForKeywordsIsChecked)
+                        {
+                            line = "$BoneMerge ";
+                        }
+                        else
+                        {
+                            line = "$bonemerge ";
+                        }
+
+                        line += "\"";
+                        line += aBone.theName;
+                        line += "\"";
+                        theOutputFileStreamWriter.WriteLine(line);
+                    }
+                }
+            }
+        }
+
+        private void WriteJiggleBoneCommand()
+        {
+            if (theMdlFileData.theBones is null)
+            {
+                return;
+            }
+
+            string line = "";
+            line = "";
+            theOutputFileStreamWriter.WriteLine(line);
+            for (int i = 0, loopTo = theMdlFileData.theBones.Count - 1; i <= loopTo; i++)
+            {
+                SourceMdlBone aBone;
+                aBone = theMdlFileData.theBones[i];
+                if (aBone.proceduralRuleType == SourceMdlBone.STUDIO_PROC_JIGGLE && aBone.proceduralRuleOffset != 0)
+                {
+                    if (Program.TheApp.Settings.DecompileQcUseMixedCaseForKeywordsIsChecked)
+                    {
+                        line = "$JiggleBone ";
+                    }
+                    else
+                    {
+                        line = "$jigglebone ";
+                    }
+
+                    line += "\"";
+                    line += aBone.theName;
+                    line += "\"";
+                    theOutputFileStreamWriter.WriteLine(line);
+                    line = "{";
+                    theOutputFileStreamWriter.WriteLine(line);
+                    if ((aBone.theJiggleBone.flags & SourceMdlJiggleBone.JIGGLE_IS_FLEXIBLE) > 0)
+                    {
+                        line = Constants.vbTab;
+                        line += "is_flexible";
+                        theOutputFileStreamWriter.WriteLine(line);
+                        line = Constants.vbTab;
+                        line += "{";
+                        theOutputFileStreamWriter.WriteLine(line);
+                        line = Constants.vbTab;
+                        line += Constants.vbTab;
+                        line += "length ";
+                        line += aBone.theJiggleBone.length.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                        theOutputFileStreamWriter.WriteLine(line);
+                        line = Constants.vbTab;
+                        line += Constants.vbTab;
+                        line += "tip_mass ";
+                        line += aBone.theJiggleBone.tipMass.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                        theOutputFileStreamWriter.WriteLine(line);
+                        line = Constants.vbTab;
+                        line += Constants.vbTab;
+                        line += "pitch_stiffness ";
+                        line += aBone.theJiggleBone.pitchStiffness.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                        theOutputFileStreamWriter.WriteLine(line);
+                        line = Constants.vbTab;
+                        line += Constants.vbTab;
+                        line += "pitch_damping ";
+                        line += aBone.theJiggleBone.pitchDamping.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                        theOutputFileStreamWriter.WriteLine(line);
+                        line = Constants.vbTab;
+                        line += Constants.vbTab;
+                        line += "yaw_stiffness ";
+                        line += aBone.theJiggleBone.yawStiffness.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                        theOutputFileStreamWriter.WriteLine(line);
+                        line = Constants.vbTab;
+                        line += Constants.vbTab;
+                        line += "yaw_damping ";
+                        line += aBone.theJiggleBone.yawDamping.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                        theOutputFileStreamWriter.WriteLine(line);
+                        if ((aBone.theJiggleBone.flags & SourceMdlJiggleBone.JIGGLE_HAS_LENGTH_CONSTRAINT) == 0)
+                        {
+                            line = Constants.vbTab;
+                            line += Constants.vbTab;
+                            line += "allow_length_flex";
+                            theOutputFileStreamWriter.WriteLine(line);
+                        }
+
+                        line = Constants.vbTab;
+                        line += Constants.vbTab;
+                        line += "along_stiffness ";
+                        line += aBone.theJiggleBone.alongStiffness.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                        theOutputFileStreamWriter.WriteLine(line);
+                        line = Constants.vbTab;
+                        line += Constants.vbTab;
+                        line += "along_damping ";
+                        line += aBone.theJiggleBone.alongDamping.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                        theOutputFileStreamWriter.WriteLine(line);
+                        WriteJiggleBoneConstraints(aBone);
+                        line = Constants.vbTab;
+                        line += "}";
+                        theOutputFileStreamWriter.WriteLine(line);
+                    }
+
+                    if ((aBone.theJiggleBone.flags & SourceMdlJiggleBone.JIGGLE_IS_RIGID) > 0)
+                    {
+                        line = Constants.vbTab;
+                        line += "is_rigid";
+                        theOutputFileStreamWriter.WriteLine(line);
+                        line = Constants.vbTab;
+                        line += "{";
+                        theOutputFileStreamWriter.WriteLine(line);
+                        line = Constants.vbTab;
+                        line += Constants.vbTab;
+                        line += "length ";
+                        line += aBone.theJiggleBone.length.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                        theOutputFileStreamWriter.WriteLine(line);
+                        line = Constants.vbTab;
+                        line += Constants.vbTab;
+                        line += "tip_mass ";
+                        line += aBone.theJiggleBone.tipMass.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                        theOutputFileStreamWriter.WriteLine(line);
+                        WriteJiggleBoneConstraints(aBone);
+                        line = Constants.vbTab;
+                        line += "}";
+                        theOutputFileStreamWriter.WriteLine(line);
+                    }
+
+                    if ((aBone.theJiggleBone.flags & SourceMdlJiggleBone.JIGGLE_HAS_BASE_SPRING) > 0)
+                    {
+                        line = Constants.vbTab;
+                        line += "has_base_spring";
+                        theOutputFileStreamWriter.WriteLine(line);
+                        line = Constants.vbTab;
+                        line += "{";
+                        theOutputFileStreamWriter.WriteLine(line);
+                        line = Constants.vbTab;
+                        line += Constants.vbTab;
+                        line += "base_mass ";
+                        line += aBone.theJiggleBone.baseMass.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                        theOutputFileStreamWriter.WriteLine(line);
+                        line = Constants.vbTab;
+                        line += Constants.vbTab;
+                        line += "stiffness ";
+                        line += aBone.theJiggleBone.baseStiffness.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                        theOutputFileStreamWriter.WriteLine(line);
+                        line = Constants.vbTab;
+                        line += Constants.vbTab;
+                        line += "damping ";
+                        line += aBone.theJiggleBone.baseDamping.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                        theOutputFileStreamWriter.WriteLine(line);
+                        line = Constants.vbTab;
+                        line += Constants.vbTab;
+                        line += "left_constraint ";
+                        // line += MathModule.RadiansToDegrees(aBone.theJiggleBone.baseMinLeft).ToString("0.######", TheApp.InternalNumberFormat)
+                        // line += " "
+                        // line += MathModule.RadiansToDegrees(aBone.theJiggleBone.baseMaxLeft).ToString("0.######", TheApp.InternalNumberFormat)
+                        line += aBone.theJiggleBone.baseMinLeft.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                        line += " ";
+                        line += aBone.theJiggleBone.baseMaxLeft.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                        theOutputFileStreamWriter.WriteLine(line);
+                        line = Constants.vbTab;
+                        line += Constants.vbTab;
+                        line += "left_friction ";
+                        line += aBone.theJiggleBone.baseLeftFriction.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                        theOutputFileStreamWriter.WriteLine(line);
+                        line = Constants.vbTab;
+                        line += Constants.vbTab;
+                        line += "up_constraint ";
+                        // line += MathModule.RadiansToDegrees(aBone.theJiggleBone.baseMinUp).ToString("0.######", TheApp.InternalNumberFormat)
+                        // line += " "
+                        // line += MathModule.RadiansToDegrees(aBone.theJiggleBone.baseMaxUp).ToString("0.######", TheApp.InternalNumberFormat)
+                        line += aBone.theJiggleBone.baseMinUp.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                        line += " ";
+                        line += aBone.theJiggleBone.baseMaxUp.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                        theOutputFileStreamWriter.WriteLine(line);
+                        line = Constants.vbTab;
+                        line += Constants.vbTab;
+                        line += "up_friction ";
+                        line += aBone.theJiggleBone.baseUpFriction.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                        theOutputFileStreamWriter.WriteLine(line);
+                        line = Constants.vbTab;
+                        line += Constants.vbTab;
+                        line += "forward_constraint ";
+                        // line += MathModule.RadiansToDegrees(aBone.theJiggleBone.baseMinForward).ToString("0.######", TheApp.InternalNumberFormat)
+                        // line += " "
+                        // line += MathModule.RadiansToDegrees(aBone.theJiggleBone.baseMaxForward).ToString("0.######", TheApp.InternalNumberFormat)
+                        line += aBone.theJiggleBone.baseMinForward.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                        line += " ";
+                        line += aBone.theJiggleBone.baseMaxForward.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                        theOutputFileStreamWriter.WriteLine(line);
+                        line = Constants.vbTab;
+                        line += Constants.vbTab;
+                        line += "forward_friction ";
+                        line += aBone.theJiggleBone.baseForwardFriction.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                        theOutputFileStreamWriter.WriteLine(line);
+                        line = Constants.vbTab;
+                        line += "}";
+                        theOutputFileStreamWriter.WriteLine(line);
+                    }
+
+                    line = "}";
+                    theOutputFileStreamWriter.WriteLine(line);
+                }
+            }
+        }
+
+        private void WriteJiggleBoneConstraints(SourceMdlBone aBone)
+        {
+            string line = "";
+            if ((aBone.theJiggleBone.flags & SourceMdlJiggleBone.JIGGLE_HAS_PITCH_CONSTRAINT) > 0)
+            {
+                line = Constants.vbTab;
+                line += Constants.vbTab;
+                line += "pitch_constraint ";
+                line += MathModule.RadiansToDegrees(aBone.theJiggleBone.minPitch).ToString("0.######", Program.TheApp.InternalNumberFormat);
+                line += " ";
+                line += MathModule.RadiansToDegrees(aBone.theJiggleBone.maxPitch).ToString("0.######", Program.TheApp.InternalNumberFormat);
+                theOutputFileStreamWriter.WriteLine(line);
+                line = Constants.vbTab;
+                line += Constants.vbTab;
+                line += "pitch_friction ";
+                line += aBone.theJiggleBone.pitchFriction.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                theOutputFileStreamWriter.WriteLine(line);
+                line = Constants.vbTab;
+                line += Constants.vbTab;
+                line += "pitch_bounce ";
+                line += aBone.theJiggleBone.pitchBounce.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                theOutputFileStreamWriter.WriteLine(line);
+            }
+
+            if ((aBone.theJiggleBone.flags & SourceMdlJiggleBone.JIGGLE_HAS_YAW_CONSTRAINT) > 0)
+            {
+                line = Constants.vbTab;
+                line += Constants.vbTab;
+                line += "yaw_constraint ";
+                line += MathModule.RadiansToDegrees(aBone.theJiggleBone.minYaw).ToString("0.######", Program.TheApp.InternalNumberFormat);
+                line += " ";
+                line += MathModule.RadiansToDegrees(aBone.theJiggleBone.maxYaw).ToString("0.######", Program.TheApp.InternalNumberFormat);
+                theOutputFileStreamWriter.WriteLine(line);
+                line = Constants.vbTab;
+                line += Constants.vbTab;
+                line += "yaw_friction ";
+                line += aBone.theJiggleBone.yawFriction.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                theOutputFileStreamWriter.WriteLine(line);
+                line = Constants.vbTab;
+                line += Constants.vbTab;
+                line += "yaw_bounce ";
+                line += aBone.theJiggleBone.yawBounce.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                theOutputFileStreamWriter.WriteLine(line);
+            }
+
+            if ((aBone.theJiggleBone.flags & SourceMdlJiggleBone.JIGGLE_HAS_ANGLE_CONSTRAINT) > 0)
+            {
+                line = Constants.vbTab;
+                line += Constants.vbTab;
+                line += "angle_constraint ";
+                line += MathModule.RadiansToDegrees(aBone.theJiggleBone.angleLimit).ToString("0.######", Program.TheApp.InternalNumberFormat);
+                theOutputFileStreamWriter.WriteLine(line);
+            }
+        }
+
+        public void WriteGroupBox()
+        {
+            WriteCBoxCommand();
+            WriteBBoxCommand();
+            if (theMdlFileData.theHitboxSets is object)
+            {
+                if (theMdlFileData.version <= 10)
+                {
+                    bool skipBoneInBBoxCommandWasUsed = false;
+                    theOutputFileStreamWriter.WriteLine();
+                    WriteHBoxCommands(theMdlFileData.theHitboxSets[0].theHitboxes, "", "", ref skipBoneInBBoxCommandWasUsed);
+                }
+                else
+                {
+                    WriteHBoxRelatedCommands();
+                }
+            }
+        }
+
+        private void WriteCBoxCommand()
+        {
+            string line = "";
+            double minX;
+            double minY;
+            double minZ;
+            double maxX;
+            double maxY;
+            double maxZ;
+            line = "";
+            theOutputFileStreamWriter.WriteLine(line);
+            if (Program.TheApp.Settings.DecompileDebugInfoFilesIsChecked)
+            {
+                line = "// Clipping box or view bounding box.";
+                theOutputFileStreamWriter.WriteLine(line);
+            }
+
+            // FROM: VDC wiki: 
+            // $cbox <float|minx> <float|miny> <float|minz> <float|maxx> <float|maxy> <float|maxz> 
+            minX = Math.Round(theMdlFileData.viewBoundingBoxMinPositionX, 3);
+            minY = Math.Round(theMdlFileData.viewBoundingBoxMinPositionY, 3);
+            minZ = Math.Round(theMdlFileData.viewBoundingBoxMinPositionZ, 3);
+            maxX = Math.Round(theMdlFileData.viewBoundingBoxMaxPositionX, 3);
+            maxY = Math.Round(theMdlFileData.viewBoundingBoxMaxPositionY, 3);
+            maxZ = Math.Round(theMdlFileData.viewBoundingBoxMaxPositionZ, 3);
+            if (Program.TheApp.Settings.DecompileQcUseMixedCaseForKeywordsIsChecked)
+            {
+                line = "$CBox ";
+            }
+            else
+            {
+                line = "$cbox ";
+            }
+
+            line += minX.ToString("0.######", Program.TheApp.InternalNumberFormat);
+            line += " ";
+            line += minY.ToString("0.######", Program.TheApp.InternalNumberFormat);
+            line += " ";
+            line += minZ.ToString("0.######", Program.TheApp.InternalNumberFormat);
+            line += " ";
+            line += maxX.ToString("0.######", Program.TheApp.InternalNumberFormat);
+            line += " ";
+            line += maxY.ToString("0.######", Program.TheApp.InternalNumberFormat);
+            line += " ";
+            line += maxZ.ToString("0.######", Program.TheApp.InternalNumberFormat);
+            theOutputFileStreamWriter.WriteLine(line);
+        }
+
+        private void WriteBBoxCommand()
+        {
+            string line = "";
+            double minX;
+            double minY;
+            double minZ;
+            double maxX;
+            double maxY;
+            double maxZ;
+            line = "";
+            theOutputFileStreamWriter.WriteLine(line);
+            if (Program.TheApp.Settings.DecompileDebugInfoFilesIsChecked)
+            {
+                line = "// Bounding box or hull. Used for collision with a world object.";
+                theOutputFileStreamWriter.WriteLine(line);
+            }
+
+            // $bbox -16.0 -16.0 -13.0 16.0 16.0 75.0
+            // FROM: VDC wiki: 
+            // $bbox (min x) (min y) (min z) (max x) (max y) (max z)
+            minX = Math.Round(theMdlFileData.hullMinPositionX, 3);
+            minY = Math.Round(theMdlFileData.hullMinPositionY, 3);
+            minZ = Math.Round(theMdlFileData.hullMinPositionZ, 3);
+            maxX = Math.Round(theMdlFileData.hullMaxPositionX, 3);
+            maxY = Math.Round(theMdlFileData.hullMaxPositionY, 3);
+            maxZ = Math.Round(theMdlFileData.hullMaxPositionZ, 3);
+            line = "";
+            if (Program.TheApp.Settings.DecompileQcUseMixedCaseForKeywordsIsChecked)
+            {
+                line += "$BBox ";
+            }
+            else
+            {
+                line += "$bbox ";
+            }
+
+            line += minX.ToString("0.######", Program.TheApp.InternalNumberFormat);
+            line += " ";
+            line += minY.ToString("0.######", Program.TheApp.InternalNumberFormat);
+            line += " ";
+            line += minZ.ToString("0.######", Program.TheApp.InternalNumberFormat);
+            line += " ";
+            line += maxX.ToString("0.######", Program.TheApp.InternalNumberFormat);
+            line += " ";
+            line += maxY.ToString("0.######", Program.TheApp.InternalNumberFormat);
+            line += " ";
+            line += maxZ.ToString("0.######", Program.TheApp.InternalNumberFormat);
+            theOutputFileStreamWriter.WriteLine(line);
+        }
+
+        private void WriteHBoxRelatedCommands()
+        {
+            string line = "";
+            string commentTag = "";
+            bool hitBoxWasAutoGenerated = false;
+            bool skipBoneInBBoxCommandWasUsed = false;
+            if (theMdlFileData.theHitboxSets.Count < 1)
+            {
+                return;
+            }
+
+            hitBoxWasAutoGenerated = (theMdlFileData.flags & SourceMdlFileData.STUDIOHDR_FLAGS_AUTOGENERATED_HITBOX) > 0;
+            if (hitBoxWasAutoGenerated && !Program.TheApp.Settings.DecompileDebugInfoFilesIsChecked)
+            {
+                return;
+            }
+
+            theOutputFileStreamWriter.WriteLine();
+            if (Program.TheApp.Settings.DecompileDebugInfoFilesIsChecked)
+            {
+                line = "// Hitbox info. Used for damage-based collision.";
+                theOutputFileStreamWriter.WriteLine(line);
+            }
+
+            if (hitBoxWasAutoGenerated)
+            {
+                line = "// The hitbox info below was automatically generated when compiled because no hitbox info was provided.";
+                theOutputFileStreamWriter.WriteLine(line);
+
+                // NOTE: Only comment-out the hbox lines if auto-generated.
+                commentTag = "// ";
+            }
+
+            // FROM: HLMV for survivor_producer: 
+            // $hboxset "L4D"
+            // $hbox 3 "ValveBiped.Bip01_Pelvis"	    -5.33   -4.00   -4.00     5.33    4.00    4.00
+            // $hbox 6 "ValveBiped.Bip01_L_Thigh"	     4.44   -3.02   -2.53    16.87    2.31    1.91
+            // $hbox 6 "ValveBiped.Bip01_L_Calf"	     0.44   -1.78   -2.22    17.32    2.66    2.22
+            // $hbox 6 "ValveBiped.Bip01_L_Toe0"	    -3.11   -0.44   -1.20     1.33    1.33    2.18
+            // $hbox 7 "ValveBiped.Bip01_R_Thigh"	     4.44   -3.02   -2.53    16.87    2.31    1.91
+            // $hbox 7 "ValveBiped.Bip01_R_Calf"	     0.44   -1.78   -2.22    17.32    2.66    2.22
+            // $hbox 7 "ValveBiped.Bip01_R_Toe0"	    -3.11   -0.44   -1.20     1.33    1.33    2.18
+            // $hbox 3 "ValveBiped.Bip01_Spine1"	    -4.44   -3.77   -5.33     4.44    5.55    5.33
+            // $hbox 2 "ValveBiped.Bip01_Spine2"	    -2.66   -3.02   -5.77    10.66    5.86    5.77
+            // $hbox 1 "ValveBiped.Bip01_Neck1"	     0.00   -2.22   -2.00     3.55    2.22    2.00
+            // $hbox 1 "ValveBiped.Bip01_Head1"	    -0.71   -3.55   -2.71     6.39    3.55    2.18
+            // $hbox 4 "ValveBiped.Bip01_L_UpperArm"	     0.00   -1.86   -1.78     9.77    1.69    1.78
+            // $hbox 4 "ValveBiped.Bip01_L_Forearm"	     0.44   -1.55   -1.55    10.21    1.55    1.55
+            // $hbox 4 "ValveBiped.Bip01_L_Hand"	     0.94   -1.28   -2.13     4.94    0.50    1.15
+            // $hbox 5 "ValveBiped.Bip01_R_UpperArm"	     0.00   -1.86   -1.78     9.77    1.69    1.78
+            // $hbox 5 "ValveBiped.Bip01_R_Forearm"	     0.44   -1.55   -1.55    10.21    1.55    1.55
+            // $hbox 5 "ValveBiped.Bip01_R_Hand"	     0.94   -1.28   -2.13     4.94    0.50    1.15
+
+            SourceMdlHitboxSet aHitboxSet;
+            for (int i = 0, loopTo = theMdlFileData.theHitboxSets.Count - 1; i <= loopTo; i++)
+            {
+                aHitboxSet = theMdlFileData.theHitboxSets[i];
+                if (Program.TheApp.Settings.DecompileQcUseMixedCaseForKeywordsIsChecked)
+                {
+                    line = "$HBoxSet ";
+                }
+                else
+                {
+                    line = "$hboxset ";
+                }
+
+                line += "\"";
+                line += aHitboxSet.theName;
+                line += "\"";
+                theOutputFileStreamWriter.WriteLine(commentTag + line);
+                if (aHitboxSet.theHitboxes is null)
+                {
+                    continue;
+                }
+
+                WriteHBoxCommands(aHitboxSet.theHitboxes, commentTag, aHitboxSet.theName, ref skipBoneInBBoxCommandWasUsed);
+            }
+
+            if (skipBoneInBBoxCommandWasUsed)
+            {
+                if (Program.TheApp.Settings.DecompileQcUseMixedCaseForKeywordsIsChecked)
+                {
+                    line = "$SkipBoneInBBox";
+                }
+                else
+                {
+                    line = "$skipboneinbbox";
+                }
+
+                theOutputFileStreamWriter.WriteLine(commentTag + line);
+            }
+        }
+
+        private void WriteHBoxCommands(List<SourceMdlHitbox> theHitboxes, string commentTag, string hitboxSetName, ref bool theSkipBoneInBBoxCommandWasUsed)
+        {
+            string line = "";
+            SourceMdlHitbox aHitbox;
+            for (int j = 0, loopTo = theHitboxes.Count - 1; j <= loopTo; j++)
+            {
+                aHitbox = theHitboxes[j];
+                if (Program.TheApp.Settings.DecompileQcUseMixedCaseForKeywordsIsChecked)
+                {
+                    line = "$HBox ";
+                }
+                else
+                {
+                    line = "$hbox ";
+                }
+
+                line += aHitbox.groupIndex.ToString(Program.TheApp.InternalNumberFormat);
+                line += " ";
+                line += "\"";
+                line += theMdlFileData.theBones[aHitbox.boneIndex].theName;
+                line += "\"";
+                line += " ";
+                line += aHitbox.boundingBoxMin.x.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                line += " ";
+                line += aHitbox.boundingBoxMin.y.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                line += " ";
+                line += aHitbox.boundingBoxMin.z.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                line += " ";
+                line += aHitbox.boundingBoxMax.x.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                line += " ";
+                line += aHitbox.boundingBoxMax.y.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                line += " ";
+                line += aHitbox.boundingBoxMax.z.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                // NOTE: For L4D2 survivor_teenangst, the extra zeroes cause this compile error: 
+                // ERROR: c:\users\zeqmacaw\documents\- unpacked source\left 4 dead 2\left4dead2_dlc3\models\survivors\decompiled 0.26\survivor_teenangst\survivor_teenangst_boxes.qci(10): - bad command 0
+                // ERROR: Aborted Processing on 'survivors/survivor_TeenAngst.mdl'
+                // If Me.theSourceEngineModel.theMdlFileHeader.version >= 49 Then
+                // TODO: [WriteHboxCommands] Probably need better way to determine when to write extra values.
+                if (theMdlFileData.version >= 49 && hitboxSetName == "cstrike")
+                {
+                    // NOTE: Roll (z) is first.
+                    line += " ";
+                    line += aHitbox.boundingBoxPitchYawRoll.z.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                    line += " ";
+                    line += aHitbox.boundingBoxPitchYawRoll.x.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                    line += " ";
+                    line += aHitbox.boundingBoxPitchYawRoll.y.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                }
+
+                line += " ";
+                line += "\"";
+                line += aHitbox.theName;
+                line += "\"";
+                theOutputFileStreamWriter.WriteLine(commentTag + line);
+                if (!theSkipBoneInBBoxCommandWasUsed)
+                {
+                    if (aHitbox.boundingBoxMin.x > 0d || aHitbox.boundingBoxMin.y > 0d || aHitbox.boundingBoxMin.z > 0d || aHitbox.boundingBoxMax.x < 0d || aHitbox.boundingBoxMax.y < 0d || aHitbox.boundingBoxMax.z < 0d)
+
+
+
+
+
+                    {
+                        theSkipBoneInBBoxCommandWasUsed = true;
+                    }
+                }
+            }
+        }
+
+        // Public Sub WriteBodyGroupCommand(ByVal startIndex As Integer)
+        public void WriteBodyGroupCommand()
+        {
+            string line = "";
+            SourceMdlBodyPart aBodyPart;
+            SourceVtxBodyPart07 aVtxBodyPart;
+            SourceMdlModel aBodyModel;
+            SourceVtxModel07 aVtxModel;
+
+            // $bodygroup "belt"
+            // {
+            // //	studio "zoey_belt.smd"
+            // "blank"
+            // }
+            // $bodygroup "shoes"
+            // {
+            // //  studio "zoey_shoes.smd"
+            // studio "zoey_feet.smd"
+            // }
+            // FROM: VDC wiki: 
+            // $bodygroup sights
+            // {
+            // studio "ironsights.smd"
+            // studio "laser_dot.smd"
+            // blank
+            // }
+            if (theMdlFileData.theBodyParts is object && theMdlFileData.theBodyParts.Count > 0)
+            {
+                line = "";
+                theOutputFileStreamWriter.WriteLine(line);
+                for (int bodyPartIndex = 0, loopTo = theMdlFileData.theBodyParts.Count - 1; bodyPartIndex <= loopTo; bodyPartIndex++)
+                {
+                    if (theMdlFileData.theModelCommandIsUsed && bodyPartIndex == theMdlFileData.theBodyPartIndexThatShouldUseModelCommand)
+                    {
+                        WriteModelCommand();
+                        continue;
+                    }
+
+                    aBodyPart = theMdlFileData.theBodyParts[bodyPartIndex];
+                    aVtxBodyPart = theVtxFileData.theVtxBodyParts[bodyPartIndex];
+                    if (Program.TheApp.Settings.DecompileQcUseMixedCaseForKeywordsIsChecked)
+                    {
+                        line = "$BodyGroup ";
+                    }
+                    else
+                    {
+                        line = "$bodygroup ";
+                    }
+
+                    line += "\"";
+                    line += aBodyPart.theName;
+                    line += "\"";
+                    theOutputFileStreamWriter.WriteLine(line);
+                    line = "{";
+                    theOutputFileStreamWriter.WriteLine(line);
+                    if (aBodyPart.theModels is object && aBodyPart.theModels.Count > 0)
+                    {
+                        for (int modelIndex = 0, loopTo1 = aBodyPart.theModels.Count - 1; modelIndex <= loopTo1; modelIndex++)
+                        {
+                            aBodyModel = aBodyPart.theModels[modelIndex];
+                            aVtxModel = aVtxBodyPart.theVtxModels[modelIndex];
+                            line = Constants.vbTab;
+                            // If aModel.name(0) = ChrW(0) Then
+                            if (aBodyModel.name[0] == '\0' && aVtxModel.theVtxModelLods[0].theVtxMeshes is null)
+                            {
+                                line += "blank";
+                            }
+                            else
+                            {
+                                aBodyModel.theSmdFileNames[0] = SourceFileNamesModule.CreateBodyGroupSmdFileName(aBodyModel.theSmdFileNames[0], bodyPartIndex, modelIndex, 0, theModelName, Conversions.ToString(aBodyModel.name));
+                                line += "studio ";
+                                line += "\"";
+                                line += aBodyModel.theSmdFileNames[0];
+                                line += "\"";
+                            }
+
+                            theOutputFileStreamWriter.WriteLine(line);
+                        }
+                    }
+
+                    line = "}";
+                    theOutputFileStreamWriter.WriteLine(line);
+                }
+            }
+        }
+
+        public void WriteControllerCommand()
+        {
+            string line = "";
+            SourceMdlBoneController boneController;
+
+            // $controller mouth "jaw" X 0 20
+            // $controller 0 "tracker" LYR -1 1
+            try
+            {
+                if (theMdlFileData.theBoneControllers is object)
+                {
+                    if (theMdlFileData.theBoneControllers.Count > 0)
+                    {
+                        theOutputFileStreamWriter.WriteLine();
+                    }
+
+                    for (int i = 0, loopTo = theMdlFileData.theBoneControllers.Count - 1; i <= loopTo; i++)
+                    {
+                        boneController = theMdlFileData.theBoneControllers[i];
+                        if (Program.TheApp.Settings.DecompileQcUseMixedCaseForKeywordsIsChecked)
+                        {
+                            line = "$Controller ";
+                        }
+                        else
+                        {
+                            line = "$controller ";
+                        }
+
+                        line += boneController.inputField.ToString(Program.TheApp.InternalNumberFormat);
+                        line += " \"";
+                        line += theMdlFileData.theBones[boneController.boneIndex].theName;
+                        line += "\" ";
+                        line += boneController.TypeName;
+                        line += " ";
+                        line += boneController.startBlah.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                        line += " ";
+                        line += boneController.endBlah.ToString("0.######", Program.TheApp.InternalNumberFormat);
+                        theOutputFileStreamWriter.WriteLine(line);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+            }
+        }
+
+        public void WriteScreenAlignCommand()
+        {
+            string line = "";
+
+            // $screenalign <bone name> <"sphere" or "cylinder">
+            try
+            {
+                if (theMdlFileData.theBones is object)
+                {
+                    SourceMdlBone aBone;
+                    bool emptyLineIsAlreadyWritten;
+                    emptyLineIsAlreadyWritten = false;
+                    for (int i = 0, loopTo = theMdlFileData.theBones.Count - 1; i <= loopTo; i++)
+                    {
+                        aBone = theMdlFileData.theBones[i];
+                        if ((aBone.flags & SourceMdlBone.BONE_SCREEN_ALIGN_SPHERE) > 0)
+                        {
+                            if (!emptyLineIsAlreadyWritten)
+                            {
+                                theOutputFileStreamWriter.WriteLine();
+                                emptyLineIsAlreadyWritten = true;
+                            }
+
+                            if (Program.TheApp.Settings.DecompileQcUseMixedCaseForKeywordsIsChecked)
+                            {
+                                line = "$ScreenAlign ";
+                            }
+                            else
+                            {
+                                line = "$screenalign ";
+                            }
+
+                            line += aBone.theName;
+                            line += " \"sphere\"";
+                            theOutputFileStreamWriter.WriteLine(line);
+                        }
+                        else if ((aBone.flags & SourceMdlBone.BONE_SCREEN_ALIGN_CYLINDER) > 0)
+                        {
+                            if (!emptyLineIsAlreadyWritten)
+                            {
+                                theOutputFileStreamWriter.WriteLine();
+                                emptyLineIsAlreadyWritten = true;
+                            }
+
+                            if (Program.TheApp.Settings.DecompileQcUseMixedCaseForKeywordsIsChecked)
+                            {
+                                line = "$ScreenAlign ";
+                            }
+                            else
+                            {
+                                line = "$screenalign ";
+                            }
+
+                            line += aBone.theName;
+                            line += " \"cylinder\"";
+                            theOutputFileStreamWriter.WriteLine(line);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+            }
+        }
+
+        public void WriteKeyValues(string keyValuesText, string commandOrOptionText)
+        {
+            string line = "";
+            string startText = "mdlkeyvalue" + Constants.vbLf;
+            string text;
+
+            // $keyvalues
+            // {
+            // "particles"
+            // {
+            // "effect"
+            // {
+            // name("sparks_head")
+            // attachment_type("follow_attachment")
+            // attachment_point("Head_sparks")
+            // }
+            // "effect"
+            // {
+            // name("sparks_head_wire1")
+            // attachment_type("follow_attachment")
+            // attachment_point("Head_Wire_1")
+            // }
+            // "effect"
+            // {
+            // name("sparks_knee_wire1")
+            // attachment_type("follow_attachment")
+            // attachment_point("R_Knee_Wire_1")
+            // }
+            // "effect"
+            // {
+            // name("sparks_knee_wire2")
+            // attachment_type("follow_attachment")
+            // attachment_point("R_Knee_Wire_2")
+            // }
+            // "effect"
+            // {
+            // name("sparks_ankle_wire1")
+            // attachment_type("follow_attachment")
+            // attachment_point("L_Ankle_Wire_1")
+            // }
+            // "effect"
+            // {
+            // name("sparks_ankle_wire2")
+            // attachment_type("follow_attachment")
+            // attachment_point("L_Ankle_Wire_2")
+            // }			
+            // }
+            // }
+            try
+            {
+                if (keyValuesText is object && keyValuesText.Length > 0)
+                {
+                    line = "";
+                    theOutputFileStreamWriter.WriteLine(line);
+                    line = commandOrOptionText;
+                    theOutputFileStreamWriter.WriteLine(line);
+                    if (keyValuesText.StartsWith(startText))
+                    {
+                        text = keyValuesText.Remove(0, startText.Length);
+                    }
+                    else
+                    {
+                        text = keyValuesText;
+                    }
+
+                    // lengthToRemove = 0
+                    // While True
+                    // stopIndex = text.IndexOf(openBraceText)
+                    // If stopIndex > -1 Then
+                    // If stopIndex > 0 Then
+                    // line = text.Substring(0, stopIndex)
+                    // Me.theOutputFileStreamWriter.WriteLine(line)
+                    // End If
+
+                    // line = "{"
+                    // lengthToRemove = stopIndex + openBraceText.Length
+                    // Else
+                    // stopIndex = text.IndexOf(closeBraceText)
+                    // If stopIndex > -1 Then
+                    // If stopIndex > 0 Then
+                    // line = text.Substring(0, stopIndex)
+                    // Me.theOutputFileStreamWriter.WriteLine(line)
+                    // End If
+
+                    // line = "}"
+                    // lengthToRemove = stopIndex + closeBraceText.Length
+                    // Else
+                    // stopIndex = text.IndexOf(linefeedCharText)
+                    // If stopIndex > -1 Then
+                    // line = text.Substring(0, stopIndex)
+                    // lengthToRemove = stopIndex + linefeedCharText.Length
+                    // Else
+                    // line = text
+                    // End If
+                    // End If
+                    // End If
+                    // Me.theOutputFileStreamWriter.WriteLine(line)
+
+                    // If stopIndex > -1 Then
+                    // text = text.Remove(0, lengthToRemove)
+                    // If text = "" Then
+                    // Exit While
+                    // End If
+                    // End If
+                    // End While
+
+                    WriteTextLines(text, 0);
+                }
+            }
+            catch (Exception ex)
+            {
+            }
+        }
+
+        private void WriteTextLines(string text, int indentCount)
+        {
+            string line = "";
+            char textChar;
+            int startIndex;
+            string indentText;
+            int lineQuoteCount;
+            int lineWordCount;
+            string beforeCloseBraceText;
+            indentText = "";
+            for (int j = 1, loopTo = indentCount; j <= loopTo; j++)
+                indentText += Constants.vbTab;
+            startIndex = 0;
+            lineQuoteCount = 0;
+            lineWordCount = 0;
+            for (int i = 0, loopTo1 = text.Length - 1; i <= loopTo1; i++)
+            {
+                textChar = text[i];
+                if (Conversions.ToString(textChar) == "{")
+                {
+                    if (i > startIndex)
+                    {
+                        line = indentText;
+                        line += text.Substring(startIndex, i - startIndex);
+                        theOutputFileStreamWriter.WriteLine(line);
+                    }
+
+                    line = indentText;
+                    line += "{";
+                    theOutputFileStreamWriter.WriteLine(line);
+                    indentCount += 1;
+                    indentText = "";
+                    for (int j = 1, loopTo2 = indentCount; j <= loopTo2; j++)
+                        indentText += Constants.vbTab;
+                    startIndex = i + 1;
+                    lineQuoteCount = 0;
+                }
+                else if (Conversions.ToString(textChar) == "}")
+                {
+                    if (i > startIndex)
+                    {
+                        beforeCloseBraceText = text.Substring(startIndex, i - startIndex).Trim();
+                        if (!string.IsNullOrEmpty(beforeCloseBraceText))
+                        {
+                            line = indentText;
+                            line += beforeCloseBraceText;
+                            theOutputFileStreamWriter.WriteLine(line);
+                        }
+                    }
+
+                    indentCount -= 1;
+                    indentText = "";
+                    for (int j = 1, loopTo3 = indentCount; j <= loopTo3; j++)
+                        indentText += Constants.vbTab;
+                    line = indentText;
+                    line += "}";
+                    theOutputFileStreamWriter.WriteLine(line);
+                    startIndex = i + 1;
+                    lineQuoteCount = 0;
+                }
+                else if (Conversions.ToString(textChar) == "\"")
+                {
+                    lineQuoteCount += 1;
+                    if (lineQuoteCount == 4)
+                    {
+                        if (i > startIndex)
+                        {
+                            line = indentText;
+                            line += text.Substring(startIndex, i - startIndex + 1).Trim();
+                            theOutputFileStreamWriter.WriteLine(line);
+                        }
+
+                        startIndex = i + 1;
+                        lineQuoteCount = 0;
+                    }
+                }
+                // If lineQuoteCount = 2 OrElse lineQuoteCount = 4 Then
+                // lineWordCount += 1
+                // End If
+                else if (Conversions.ToString(textChar) == Constants.vbLf)
+                {
+                    startIndex = i + 1;
+                    lineQuoteCount = 0;
+                }
+            }
+        }
+
+        public void WriteQciDeclareSequenceLines()
+        {
+            if (theMdlFileData.theSequenceDescs is object)
+            {
+                string line = "";
+                theOutputFileStreamWriter.WriteLine();
+                for (int i = 0, loopTo = theMdlFileData.theSequenceDescs.Count - 1; i <= loopTo; i++)
+                {
+                    SourceMdlSequenceDesc aSequenceDesc;
+                    aSequenceDesc = theMdlFileData.theSequenceDescs[i];
+                    if (Program.TheApp.Settings.DecompileQcUseMixedCaseForKeywordsIsChecked)
+                    {
+                        line = "$DeclareSequence";
+                    }
+                    else
+                    {
+                        line = "$declaresequence";
+                    }
+
+                    line += " \"";
+                    line += aSequenceDesc.theName;
+                    line += "\"";
+                    theOutputFileStreamWriter.WriteLine(line);
+                }
+            }
+        }
+
+        #endregion
+
+        #region Data
+
+        // Private theModel As SourceModel
+        private StreamWriter theOutputFileStreamWriter;
+        // Private theAniFileData As SourceAniFileData49
+        private SourceMdlFileData53 theMdlFileData;
+        private SourcePhyFileData thePhyFileData;
+        private SourceVtxFileData07 theVtxFileData;
+        private string theModelName;
+        private string theOutputPath;
+        private string theOutputFileNameWithoutExtension;
+
+        #endregion
+
+    }
+}

@@ -1,0 +1,37 @@
+﻿
+namespace Crowbar
+{
+    public class SourceMdlAxisInterpBone
+    {
+
+        // FROM: SourceEngineXXXX_source\public\studio.h
+        // struct mstudioaxisinterpbone_t
+        // {
+        // DECLARE_BYTESWAP_DATADESC();
+        // int				control;// local transformation of this bone used to calc 3 point blend
+        // int				axis;	// axis to check
+        // Vector			pos[6];	// X+, X-, Y+, Y-, Z+, Z-
+        // Quaternion		quat[6];// X+, X-, Y+, Y-, Z+, Z-
+        // 
+        // mstudioaxisinterpbone_t(){}
+        // private:
+        // // No copy constructors allowed
+        // mstudioaxisinterpbone_t(const mstudioaxisinterpbone_t& vOther);
+        // };
+
+
+
+        public SourceMdlAxisInterpBone()
+        {
+            for (int i = 0, loopTo = pos.Length - 1; i <= loopTo; i++)
+                pos[i] = new SourceVector();
+            for (int i = 0, loopTo1 = quat.Length - 1; i <= loopTo1; i++)
+                quat[i] = new SourceQuaternion();
+        }
+
+        public int control;
+        public int axis;
+        public SourceVector[] pos = new SourceVector[6];
+        public SourceQuaternion[] quat = new SourceQuaternion[6];
+    }
+}
