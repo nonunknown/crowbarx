@@ -529,7 +529,7 @@ namespace Crowbar
                 // NOTE: Write log files before data files, in case something goes wrong with writing data files.
                 //if (Program.TheApp.Settings.DecompileDebugInfoFilesIsChecked)
                 //TODO: 
-                if (true)
+                if (Program.TheApp.Verbose)
                 {
                     UpdateProgress(2, "Writing decompile-info files ...");
                     WriteDebugFiles(model);

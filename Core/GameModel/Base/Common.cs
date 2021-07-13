@@ -446,7 +446,7 @@ namespace Crowbar
         {
             //if (!Program.TheApp.Settings.DecompileStricterFormatIsChecked)
             //TODO: IMPORTANT MAYBE FALSE???
-            if (true)
+            if (Program.TheApp.Verbose)
             {
                 string line = "";
                 line = "// ";

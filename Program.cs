@@ -9,17 +9,35 @@ namespace Crowbar
         static void Main(string[] args)
         {
             
-            Console.WriteLine(args.Length);
-            if (args.Length != 2) {
-                Console.WriteLine("Use only 2 args: \"input/path.mdl\" \"output/path/\"");
+            if (args.Length < 2) {
+                Console.WriteLine("Args are: \"input/path.mdl\" \"output/path/\"");
+                Console.WriteLine("Extra args: -v (Verbose)");
                 return;
             }
             else
             {
+                bool verbose = false;
+                for (int i = 2; i < args.Length; i++)
+                {
+                    switch (args[i]) {
+                        case "-v":
+                            verbose = true;
+                        break;
+
+                        default:
+                            
+                        break;
+                    }
+                }
+
                 TheApp = new App();
                 TheApp.Init();
+                TheApp.Verbose = verbose;
                 args[0] = args[0].Replace("\"","");
                 args[1] = args[1].Replace("\"","");
+
+                
+
                 TheApp.SetOutputFolder(args[1]);
                 TheApp.Decompiler.Decompile(args[0]);
             }

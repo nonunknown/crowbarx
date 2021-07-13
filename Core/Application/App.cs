@@ -30,7 +30,7 @@ namespace Crowbar
         }
 
         public string decompiledOutputPath = "";
-
+        public bool Verbose = false;
         #region IDisposable Support
 
         // public void Dispose()
@@ -65,11 +65,22 @@ namespace Crowbar
         #endregion
 
         #region Init and Free
-
+        
+        private string GetExePath() {
+            string strExeFilePath = System.Reflection.Assembly.GetExecutingAssembly().Location;
+            //This will strip just the working path name:
+            string strWorkPath = System.IO.Path.GetDirectoryName(strExeFilePath);
+            return strWorkPath;
+        }
         public void Init()
         {
-            theAppPath = "/home/nonunknown/Desktop/test/";//System.IO.Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);//Application.StartupPath;
-            Console.WriteLine("App path: ", theAppPath);
+
+            theAppPath = GetExePath();
+            if (Verbose)
+            {
+                Console.WriteLine("-- CX --");
+                Console.WriteLine("App path: ", theAppPath);
+            }
             // NOTE: Needed for using DLLs placed in folder separate from main EXE file.
             // Environment.SetEnvironmentVariable("path", GetCustomDataPath(), EnvironmentVariableTarget.Process);
             // WriteRequiredFiles();
@@ -86,12 +97,12 @@ namespace Crowbar
             // thePacker = new Packer();
             // Me.theModelViewer = New Viewer()
 
-            string documentsPath;
-            documentsPath = Path.Combine(theAppPath, "Documents");
-            AppConstants.HelpTutorialLink = Path.Combine(documentsPath, AppConstants.HelpTutorialLink);
-            AppConstants.HelpContentsLink = Path.Combine(documentsPath, AppConstants.HelpContentsLink);
-            AppConstants.HelpIndexLink = Path.Combine(documentsPath, AppConstants.HelpIndexLink);
-            AppConstants.HelpTipsLink = Path.Combine(documentsPath, AppConstants.HelpTipsLink);
+            // string documentsPath;
+            // documentsPath = Path.Combine(theAppPath, "Documents");
+            // AppConstants.HelpTutorialLink = Path.Combine(documentsPath, AppConstants.HelpTutorialLink);
+            // AppConstants.HelpContentsLink = Path.Combine(documentsPath, AppConstants.HelpContentsLink);
+            // AppConstants.HelpIndexLink = Path.Combine(documentsPath, AppConstants.HelpIndexLink);
+            // AppConstants.HelpTipsLink = Path.Combine(documentsPath, AppConstants.HelpTipsLink);
             theSettings = new AppSettings();
         }
 
@@ -495,9 +506,9 @@ namespace Crowbar
         public string GetProductNameAndVersion()
         {
             string result;
-            result = "CrowbarX";//My.MyProject.Application.Info.ProductName;
+            result = "CrowbarX";
             result += " ";
-            result += "0.1";//My.MyProject.Application.Info.Version.ToString(2);
+            result += "0.2";
             return result;
         }
 
