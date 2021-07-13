@@ -7,7 +7,7 @@ For those who doesnt know what Crowbar is, read here > https://steamcommunity.co
 
 ### ChangeLog
 
-* 0.2
+**0.2**
 - Removed Some unused files
 - Refactored `FileManager.cs` due to Path and SMD files problems
 - Added "-v" for verbose/debugging printing
