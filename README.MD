@@ -1,11 +1,22 @@
 # Crowbar X
 
-This is a modified version of crowbar which was converted from VB(Visual Basic) to C#.
+This is a modified version of crowbar which was converted from VB(Visual Basic) to C#. (only Decompilation Module)
+
+For those who doesnt know what Crowbar is, read here > https://steamcommunity.com/groups/CrowbarTool
+
+
+### ChangeLog
+
+* 0.2
+- Removed Some unused files
+- Refactored `FileManager.cs` due to Path and SMD files problems
+- Added "-v" for verbose/debugging printing
+- Changed some `if (true)` to `check for verbose command` (Generate the Log Files)
 
 ### Contents
 
 * CLI application
-* X-Platform
+* Cross-Platform
 
 
 ### Why this?
@@ -29,10 +40,12 @@ simples as that :D (and yeah the release works for all OSes)
 
 .Net Core 3.1
 
-### ChangeLog
 
-* 0.2
-- Removed Some unused files
-- Refactored `FileManager.cs` due to Path and SMD files problems
-- Added "-v" for verbose/debugging printing
-- Changed some `if (true)` to `check for verbose command` (Generate the Log Files)
+### References
+
+Zeq's Crowbar - https://github.com/ZeqMacaw/Crowbar
+
+Lasa's VMF import for blender - https://github.com/lasa01/io_import_vmf
+
+VB2CS - https://github.com/icsharpcode/CodeConverter/
+
