@@ -7,6 +7,10 @@ For those who doesnt know what Crowbar is, read here > https://steamcommunity.co
 
 ### ChangeLog
 
+**0.3**
+- Removed some unused functions and vb related comments
+- Corrected the bug where windows's backslash was being included to smd files
+
 **0.2**
 - Removed Some unused files
 - Refactored `FileManager.cs` due to Path and SMD files problems

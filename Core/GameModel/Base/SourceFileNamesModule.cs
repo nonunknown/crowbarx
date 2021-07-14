@@ -9,100 +9,14 @@ namespace Crowbar
     {
         public static string CreateBodyGroupSmdFileName(string givenBodyGroupSmdFileName, int bodyPartIndex, int modelIndex, int lodIndex, string modelName, string bodyModelName)
         {
-            // Dim bodyModelNameTrimmed As String
-            // Dim bodyModelFileName As String = ""
-            // Dim bodyModelFileNameWithoutExtension As String
-            // Dim bodyGroupSmdFileName As String = ""
-
-            // If (bodyPartIndex = 0 AndAlso modelIndex = 0 AndAlso lodIndex = 0) _
-            // AndAlso (theModelCommandIsUsed OrElse (bodyPartCount = 1 AndAlso bodyModelCount = 1)) _
-            // Then
-            // bodyGroupSmdFileName = modelName
-            // bodyGroupSmdFileName += "_reference"
-            // bodyGroupSmdFileName += ".smd"
-            // Else
-            // If FileManager.FilePathHasInvalidChars(bodyModelName.Trim(Chr(0))) Then
-            // bodyModelFileName = "body"
-            // bodyModelFileName += CStr(bodyPartIndex)
-            // bodyModelFileName += "_model"
-            // bodyModelFileName += CStr(modelIndex)
-            // Else
-            // bodyModelFileName = Path.GetFileName(bodyModelName.Trim(Chr(0))).ToLower(TheApp.InternalCultureInfo)
-            // End If
-            // bodyModelFileNameWithoutExtension = Path.GetFileNameWithoutExtension(bodyModelFileName)
-
-            // If Not bodyModelFileName.StartsWith(modelName) Then
-            // bodyGroupSmdFileName += modelName + "_"
-            // End If
-            // bodyGroupSmdFileName += bodyModelFileNameWithoutExtension
-            // If lodIndex > 0 Then
-            // bodyGroupSmdFileName += "_lod"
-            // bodyGroupSmdFileName += lodIndex.ToString()
-            // End If
-            // bodyGroupSmdFileName += ".smd"
-            // End If
-            // ======
-            // bodyModelNameTrimmed = bodyModelName.Trim(Chr(0))
-            // Try
-            // bodyModelFileName = Path.GetFileName(bodyModelNameTrimmed).ToLower(TheApp.InternalCultureInfo)
-            // If FileManager.FilePathHasInvalidChars(bodyModelFileName) Then
-            // bodyModelFileName = "body"
-            // bodyModelFileName += CStr(bodyPartIndex)
-            // bodyModelFileName += "_model"
-            // bodyModelFileName += CStr(modelIndex)
-            // End If
-            // Catch ex As Exception
-            // bodyModelFileName = "body"
-            // bodyModelFileName += CStr(bodyPartIndex)
-            // bodyModelFileName += "_model"
-            // bodyModelFileName += CStr(modelIndex)
-            // End Try
-            // bodyModelFileNameWithoutExtension = Path.GetFileNameWithoutExtension(bodyModelFileName)
-            // 
-            // If Not bodyModelFileName.StartsWith(modelName) Then
-            // bodyGroupSmdFileName += modelName + "_"
-            // End If
-            // bodyGroupSmdFileName += bodyModelFileNameWithoutExtension
-            // If lodIndex > 0 Then
-            // bodyGroupSmdFileName += "_lod"
-            // bodyGroupSmdFileName += lodIndex.ToString()
-            // End If
-            // bodyGroupSmdFileName += ".smd"
-            // ======
-            // 'NOTE: Ignore bodyModelName altogether because already making up the first part of file names 
-            // '      so might as well make the rest of the file names unique with an easy pattern.
-
-            // Dim bodyGroupSmdFileName As String
-
-            // If bodyPartIndex = 0 AndAlso modelIndex = 0 AndAlso lodIndex = 0 AndAlso Not String.IsNullOrEmpty(sequenceGroupFileName) AndAlso Not FileManager.FilePathHasInvalidChars(sequenceGroupFileName) Then
-            // bodyGroupSmdFileName = Path.GetFileName(sequenceGroupFileName.Trim(Chr(0))).ToLower(TheApp.InternalCultureInfo)
-            // If Not bodyGroupSmdFileName.StartsWith(modelName) Then
-            // bodyGroupSmdFileName = modelName + "_" + bodyGroupSmdFileName
-            // End If
-            // Else
-            // bodyGroupSmdFileName = modelName
-            // bodyGroupSmdFileName += "_"
-            // If bodyPartCount = 1 AndAlso bodyModelCount = 1 AndAlso lodIndex = 0 Then
-            // bodyGroupSmdFileName += "reference"
-            // Else
-            // bodyGroupSmdFileName += "body"
-            // bodyGroupSmdFileName += CStr(bodyPartIndex)
-            // bodyGroupSmdFileName += "_model"
-            // bodyGroupSmdFileName += CStr(modelIndex)
-            // End If
-            // If lodIndex > 0 Then
-            // bodyGroupSmdFileName += "_lod"
-            // bodyGroupSmdFileName += lodIndex.ToString()
-            // End If
-            // If includeExtension Then
-            // bodyGroupSmdFileName += ".smd"
-            // End If
-            // End If
-            // ======
+            //TODO ?: naming bug solve here?
             // Use bodyModel name, but make sure the file name is unique for this model.
             string bodyGroupSmdFileName = "";
             string bodyModelFileName = "";
             string bodyModelFileNameWithoutExtension = "";
+
+            
+
             if (!string.IsNullOrEmpty(givenBodyGroupSmdFileName))
             {
                 bodyGroupSmdFileName = givenBodyGroupSmdFileName;
@@ -112,6 +26,12 @@ namespace Crowbar
                 try
                 {
                     bodyModelFileName = Path.GetFileName(bodyModelName.Trim('\0'));
+                    //Remove windows backslash that was being inserted to the filename
+                    if (bodyModelFileName.Contains("\\"))
+                    {
+                        string[] result = bodyModelFileName.Split("\\");
+                        bodyModelFileName = result[1];
+                    }
                     if (FileManager.FilePathHasInvalidChars(bodyModelFileName))
                     {
                         bodyModelFileName = "body";
@@ -127,6 +47,8 @@ namespace Crowbar
                     bodyModelFileName += "_model";
                     bodyModelFileName += modelIndex.ToString();
                 }
+
+
 
                 bodyModelFileNameWithoutExtension = Path.GetFileNameWithoutExtension(bodyModelFileName);
                 if (Program.TheApp.Settings.DecompilePrefixFileNamesWithModelNameIsChecked && !bodyModelFileName.ToLower(Program.TheApp.InternalCultureInfo).StartsWith(modelName.ToLower(Program.TheApp.InternalCultureInfo)))

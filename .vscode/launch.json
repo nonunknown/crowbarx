@@ -11,7 +11,7 @@
             "preLaunchTask": "build",
             // If you have changed target frameworks, make sure to update the program path.
             "program": "${workspaceFolder}/bin/Debug/netcoreapp3.1/crowbar.dll",
-            "args": [],
+            "args": ["/home/nonunknown/Desktop/crate/metal_crate_003_48_low.mdl","/home/nonunknown/Desktop/crate/out/","-v"],
             "cwd": "${workspaceFolder}",
             // For more information about the 'console' field, see https://aka.ms/VSCode-CS-LaunchJson-Console
             "console": "internalConsole",

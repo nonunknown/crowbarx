@@ -841,6 +841,13 @@ namespace Crowbar
 
                                     smdFileName = SourceFileNamesModule.CreateBodyGroupSmdFileName(aBodyModel.theSmdFileNames[lodIndex], bodyPartIndex, modelIndex, lodIndex, theName, Conversions.ToString(theMdlFileData.theBodyParts[bodyPartIndex].theModels[modelIndex].name));
                                     smdPathFileName = Path.Combine(modelOutputPath, smdFileName);
+                                    if (Program.TheApp.Verbose)
+                                    {
+                                        
+                                        Console.WriteLine("     [VERSOBE] MDL 49 - SmdFileName: " + smdFileName);
+                                        Console.WriteLine("     [VERSOBE] MDL 49 - smdPathFileName: " + smdPathFileName);
+
+                                    }
                                     NotifySourceModelProgress(AppEnums.ProgressOptions.WritingFileStarted, smdPathFileName);
                                     // NOTE: Check here in case writing is canceled in the above event.
                                     if (theWritingIsCanceled)

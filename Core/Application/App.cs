@@ -323,137 +323,13 @@ namespace Crowbar
             return outputPath;
         }
 
-        // public void SaveAppSettings()
-        // {
-        //     string appSettingsPath;
-        //     string appSettingsPathFileName;
-        //     appSettingsPathFileName = GetAppSettingsPathFileName();
-        //     appSettingsPath = FileManager.GetPath(appSettingsPathFileName);
-        //     if (FileManager.PathExistsAfterTryToCreate(appSettingsPath))
-        //     {
-        //         FileManager.WriteXml(theSettings, appSettingsPathFileName);
-        //     }
-        // }
 
-        // public void InitAppInfo()
-        // {
-        //     if (SteamAppInfos is null)
-        //     {
-        //         SteamAppInfos = SteamAppInfoBase.GetSteamAppInfos();
-        //     }
-        // }
-
-        // TODO: [GetCustomDataPath] Have location option where custom data and settings is saved.
-        // public string GetCustomDataPath()
-        // {
-        //     string customDataPath;
-        //     // Dim appDataPath As String
-
-        //     // ' If the settings file exists in the app's Data folder, then load it.
-        //     // appDataPath = Me.GetAppDataPath()
-        //     // If appDataPath <> "" Then
-        //     // customDataPath = appDataPath
-        //     // Else
-        //     // NOTE: Use "standard Windows location for app data".
-        //     // NOTE: Using Path.Combine in case theStartupFolder is a root folder, like "C:\".
-        //     customDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "ZeqMacaw");
-        //     customDataPath += Conversions.ToString(Path.DirectorySeparatorChar);
-        //     // customDataPath += "Crowbar"
-        //     customDataPath += My.MyProject.Application.Info.ProductName;
-        //     customDataPath += " ";
-        //     customDataPath += My.MyProject.Application.Info.Version.ToString(2);
-        //     FileManager.CreatePath(customDataPath);
-        //     // End If
-
-        //     return customDataPath;
-        // }
-
-        // public string GetPreviewsPath()
-        // {
-        //     string customDataPath = Program.TheApp.GetCustomDataPath();
-        //     string previewsPath = Path.Combine(customDataPath, PreviewsRelativePath);
-        //     if (FileManager.PathExistsAfterTryToCreate(previewsPath))
-        //     {
-        //         return previewsPath;
-        //     }
-        //     else
-        //     {
-        //         return "";
-        //     }
-        // }
-
-        // public string GetAppSettingsPathFileName()
-        // {
-        //     return Path.Combine(GetCustomDataPath(), theAppSettingsFileName);
-        // }
 
         #endregion
 
         #region Private Methods
 
-        // private void LoadAppSettings()
-        // {
-        //     string appSettingsPathFileName;
-        //     appSettingsPathFileName = GetAppSettingsPathFileName();
-        //     bool commandLineOption_Settings_IsEnabled = false;
-        //     var commandLineValues = new ReadOnlyCollection<string>(Environment.GetCommandLineArgs());
-        //     if (commandLineValues.Count > 1 && !string.IsNullOrEmpty(commandLineValues[1]))
-        //     {
-        //         string command = commandLineValues[1];
-        //         if (command.StartsWith(SettingsParameter))
-        //         {
-        //             commandLineOption_Settings_IsEnabled = true;
-        //             string oldAppSettingsPathFileName = command.Replace(SettingsParameter, "");
-        //             oldAppSettingsPathFileName = oldAppSettingsPathFileName.Replace("\"", "");
-        //             if (File.Exists(oldAppSettingsPathFileName))
-        //             {
-        //                 File.Copy(oldAppSettingsPathFileName, appSettingsPathFileName, true);
-        //             }
-        //         }
-        //     }
 
-        //     if (File.Exists(appSettingsPathFileName))
-        //     {
-        //         try
-        //         {
-        //             VersionModule.ConvertSettingsFile(appSettingsPathFileName);
-        //             theSettings = (AppSettings)FileManager.ReadXml(typeof(AppSettings), appSettingsPathFileName);
-        //         }
-        //         catch
-        //         {
-        //             CreateAppSettings();
-        //         }
-        //     }
-        //     else
-        //     {
-        //         // File not found, so init default values.
-        //         CreateAppSettings();
-        //     }
-        // }
-
-        // private void CreateAppSettings()
-        // {
-        //     theSettings = new AppSettings();
-        //     var gameSetup = new GameSetup();
-        //     theSettings.GameSetups.Add(gameSetup);
-        //     var aPath = new SteamLibraryPath();
-        //     theSettings.SteamLibraryPaths.Add(aPath);
-        //     SaveAppSettings();
-        // }
-
-        // Private Function GetAppDataPath() As String
-        // Dim appDataPath As String
-        // Dim appDataPathFileName As String
-
-        // appDataPath = Path.Combine(Me.theAppPath, App.theDataFolderName)
-        // appDataPathFileName = Path.Combine(appDataPath, App.theAppSettingsFileName)
-
-        // If File.Exists(appDataPathFileName) Then
-        // Return appDataPath
-        // Else
-        // Return ""
-        // End If
-        // End Function
 
         private void WriteResourceToFileIfDifferent(byte[] dataResource, string pathFileName)
         {
@@ -508,32 +384,11 @@ namespace Crowbar
             string result;
             result = "CrowbarX";
             result += " ";
-            result += "0.2";
+            result += "0.3";
             return result;
         }
 
-        // public string GetProcessedPathFileName(string pathFileName)
-        // {
-        //     string result;
-        //     string aMacro;
-        //     result = pathFileName;
-        //     foreach (SteamLibraryPath aSteamLibraryPath in Settings.SteamLibraryPaths)
-        //     {
-        //         aMacro = aSteamLibraryPath.Macro;
-        //         if (pathFileName.StartsWith(aMacro))
-        //         {
-        //             pathFileName = pathFileName.Remove(0, aMacro.Length);
-        //             if (pathFileName.StartsWith(@"\"))
-        //             {
-        //                 pathFileName = pathFileName.Remove(0, 1);
-        //             }
-
-        //             result = Path.Combine(aSteamLibraryPath.LibraryPath, pathFileName);
-        //         }
-        //     }
-
-        //     return result;
-        // }
+  
 
         #endregion
 

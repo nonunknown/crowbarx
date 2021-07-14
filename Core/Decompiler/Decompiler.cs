@@ -919,6 +919,12 @@ namespace Crowbar
                     theDecompiledFileType = AppEnums.DecompiledFileType.ReferenceMesh;
                     theFirstDecompiledFileHasBeenAdded = false;
                     model.SourceModelProgress += Model_SourceModelProgress;
+
+                    if (Program.TheApp.Verbose)
+                    {
+                        Console.WriteLine("     [VERBOSE] modelOutPath: "+theModelOutputPath);
+                    }
+
                     status = model.WriteReferenceMeshFiles(theModelOutputPath);
                     model.SourceModelProgress -= Model_SourceModelProgress;
                     // Me.UpdateProgress(3, "... Writing reference mesh files finished.")

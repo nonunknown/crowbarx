@@ -85,6 +85,10 @@ namespace Crowbar
                             aBodyModel = aBodyPart.theModels[modelIndex];
                             aBodyModel.theSmdFileName = SourceFileNamesModule.CreateBodyGroupSmdFileName(aBodyModel.theSmdFileName, bodyPartIndex, modelIndex, 0, theName, "");
                             smdPathFileName = Path.Combine(modelOutputPath, aBodyModel.theSmdFileName);
+                            if (Program.TheApp.Verbose)
+                            {
+                                Console.WriteLine("     [VERBOSE] SmdPathFileName: " + smdPathFileName);
+                            }
                             NotifySourceModelProgress(AppEnums.ProgressOptions.WritingFileStarted, smdPathFileName);
                             // NOTE: Check here in case writing is canceled in the above event.
                             if (theWritingIsCanceled)

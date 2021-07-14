@@ -30,7 +30,7 @@ namespace Crowbar
             // Me.theViewerIsRunning = False
             thePackerIsRunning = false;
             // theGameSetups = new BindingListExAutoSort<GameSetup>("GameName");
-            theSteamAppPathFileName = @"C:\Program Files (x86)\Steam\Steam.exe";
+            
             // theSteamLibraryPaths = new BindingListEx<SteamLibraryPath>();
             theSetUpGamesGameSetupSelectedIndex = 0;
             theDownloadItemIdOrLink = "";
