@@ -27,11 +27,6 @@ namespace Crowbar
                 {
                     bodyModelFileName = Path.GetFileName(bodyModelName.Trim('\0'));
                     //Remove windows backslash that was being inserted to the filename
-                    if (bodyModelFileName.Contains("\\"))
-                    {
-                        string[] result = bodyModelFileName.Split("\\");
-                        bodyModelFileName = result[1];
-                    }
                     if (FileManager.FilePathHasInvalidChars(bodyModelFileName))
                     {
                         bodyModelFileName = "body";
@@ -39,6 +34,13 @@ namespace Crowbar
                         bodyModelFileName += "_model";
                         bodyModelFileName += modelIndex.ToString();
                     }
+                    if (bodyModelFileName.Contains("\\"))
+                    {
+                        string[] result = bodyModelFileName.Split("\\");
+                        bodyModelFileName = result[result.Length-1]; //get always the last result
+                        // bodyModelFileName = bodyModelFileName.Replace("\\","/");
+                    }
+                    
                 }
                 catch (Exception ex)
                 {
